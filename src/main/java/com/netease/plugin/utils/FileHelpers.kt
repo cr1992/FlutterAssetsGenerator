@@ -16,7 +16,7 @@ import java.io.FileInputStream
 
 object FileHelpers {
     /**
-     * 获取缓存路径
+     * 获取资源路径
      */
     @JvmStatic
     fun getAssetsFolder(project: Project): VirtualFile {
@@ -31,8 +31,24 @@ object FileHelpers {
      */
     private fun getGeneratedFilePath(project: Project): VirtualFile {
         return PubRoot.forFile(getProjectIdeaFile(project))?.lib?.let { lib ->
-            return@let (lib.findChild("generated")
-                    ?: lib.createChildDirectory(this, "generated"))
+            var filePath = PluginSetting.getInstance().filePath
+            if (filePath.isNullOrEmpty()) {
+                return@let lib
+            }
+            filePath = filePath.trim()
+            if (!filePath.contains("/")) {
+                return@let lib.findChild(filePath)
+                        ?: lib.createChildDirectory(lib, filePath)
+            } else {
+                var file = lib
+                filePath.split("/").forEach { dir ->
+                    if (dir.isNotEmpty()) {
+                        file = file.findChild(dir)
+                                ?: file.createChildDirectory(file, dir)
+                    }
+                }
+                return@let file
+            }
         }!!
     }
 
