@@ -37,7 +37,7 @@ public class AppSettingsComponent {
 
 
     public String getAssetsPath() {
-        return assetsPathText.getText();
+        return assetsPathText.getText().trim().replaceAll("/", "");
     }
 
     public void setAssetsPath(String newText) {
