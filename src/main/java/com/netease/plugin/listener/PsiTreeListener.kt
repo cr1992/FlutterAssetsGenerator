@@ -8,11 +8,13 @@ import com.intellij.util.castSafelyTo
 import com.netease.plugin.FileGenerator
 import com.netease.plugin.setting.PluginSetting
 import com.netease.plugin.utils.FileHelpers
-import kotlinx.coroutines.delay
-import kotlin.concurrent.timer
+import java.util.*
+import kotlin.concurrent.timerTask
 
 class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     private val fileGenerator = FileGenerator(project)
+    private val timer = Timer()
+    private var timerTask: TimerTask? = null
 
     override fun beforePropertyChange(event: PsiTreeChangeEvent) {
     }
@@ -64,7 +66,11 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
             changedFile.parent.castSafelyTo<PsiDirectory>()?.let { dir ->
                 //assets目录发生改变
                 if (dir.virtualFile.path.startsWith(FileHelpers.getAssetsFolder(project).path)) {
-                    fileGenerator.generate()
+                    timerTask?.cancel()
+                    timerTask = timerTask {
+                        fileGenerator.generate()
+                    }
+                    timer.schedule(timerTask, 300)
                 }
             }
         }
