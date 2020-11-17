@@ -1,5 +1,7 @@
 # Flutter Assets generator
-It's a plug-in that generates an asset index which we can easily find.
+It's a plug-in that generates an asset index which we can easily find.It can be used on Android Studio or Idea.
+## installing
+Drag it to your IDE to install.
 ## How to use
 - Build -> Generate Assets class
 - Alt/Opt + G
