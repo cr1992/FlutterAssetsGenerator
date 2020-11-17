@@ -19,5 +19,10 @@ Image.asset(
 You can also define it in your keymaps.
 
 ## Settings
-You can set your configuration in Preferences -> Tools -> Flutter assets generator
-, plugin supports auto-detection, default setting is off.
+You can set your configuration in Preferences -> Tools -> Flutter assets generator.
+
+- Assets path 
+- Generated file path 
+- Generated class name 
+- Auto-detection 
+- Named with parent
