@@ -14,6 +14,7 @@ public class AppSettingsComponent {
     private final JBTextField filePath = new JBTextField();
     private final JBTextField className = new JBTextField();
     private final JBCheckBox autoDetection = new JBCheckBox("Enable auto-detection");
+    private final JBCheckBox namedWithParent = new JBCheckBox("Named with parent");
 
     public AppSettingsComponent() {
         myMainPanel = FormBuilder.createFormBuilder()
@@ -21,6 +22,7 @@ public class AppSettingsComponent {
                 .addLabeledComponent(new JBLabel("Enter generate path(based on lib/): "), filePath, 1, false)
                 .addLabeledComponent(new JBLabel("Enter generate class name: "), className, 1, false)
                 .addComponent(autoDetection, 1)
+                .addComponent(namedWithParent, 1)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
@@ -64,6 +66,14 @@ public class AppSettingsComponent {
 
     public void setAutoDetection(boolean newStatus) {
         autoDetection.setSelected(newStatus);
+    }
+
+    public boolean getNamedWithParent() {
+        return namedWithParent.isSelected();
+    }
+
+    public void setNamedWithParent(boolean newStatus) {
+        namedWithParent.setSelected(newStatus);
     }
 
 }

@@ -38,6 +38,7 @@ public class AppSettingsConfigurable implements Configurable {
         modified |= mySettingsComponent.getAutoDetection() != settings.autoDetection;
         modified |= !mySettingsComponent.getClassName().equals(settings.className);
         modified |= !mySettingsComponent.getFilePath().equals(settings.filePath);
+        modified |= mySettingsComponent.getNamedWithParent() != settings.namedWithParent;
         return modified;
     }
 
@@ -48,6 +49,7 @@ public class AppSettingsConfigurable implements Configurable {
         settings.autoDetection = mySettingsComponent.getAutoDetection();
         settings.className = mySettingsComponent.getClassName();
         settings.filePath = mySettingsComponent.getFilePath();
+        settings.namedWithParent = mySettingsComponent.getNamedWithParent();
     }
 
     @Override
@@ -57,6 +59,7 @@ public class AppSettingsConfigurable implements Configurable {
         mySettingsComponent.setAutoDetection(settings.autoDetection);
         mySettingsComponent.setClassName(settings.className);
         mySettingsComponent.setFilePath(settings.filePath);
+        mySettingsComponent.setNamedWithParent(settings.namedWithParent);
     }
 
     @Override

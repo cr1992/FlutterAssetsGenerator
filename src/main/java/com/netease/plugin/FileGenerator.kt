@@ -54,7 +54,17 @@ class FileGenerator(private val project: Project) {
             if (it.isDirectory) {
                 generateFileMap(it, map)
             } else {
-                map["${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                if (PluginSetting.getInstance().namedWithParent) {
+                    it.parent?.let { parent ->
+                        if (parent.name == PluginSetting.getInstance().assetsPath) {
+                            map["${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                        } else {
+                            map["${parent.name}_${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                        }
+                    }
+                } else {
+                    map["${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                }
             }
         }
     }

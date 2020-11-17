@@ -4,8 +4,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
 import com.netease.plugin.setting.PluginSetting
 import io.flutter.pub.PubRoot
