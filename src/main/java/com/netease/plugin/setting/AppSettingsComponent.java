@@ -19,8 +19,8 @@ public class AppSettingsComponent {
     public AppSettingsComponent() {
         myMainPanel = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("Enter assets path: "), assetsPathText, 1, false)
-                .addLabeledComponent(new JBLabel("Enter generate path(based on lib/): "), filePath, 1, false)
-                .addLabeledComponent(new JBLabel("Enter generate class name: "), className, 1, false)
+                .addLabeledComponent(new JBLabel("Enter generated path(based on lib/): "), filePath, 1, false)
+                .addLabeledComponent(new JBLabel("Enter generated class name: "), className, 1, false)
                 .addComponent(autoDetection, 1)
                 .addComponent(namedWithParent, 1)
                 .addComponentFillVertically(new JPanel(), 0)
