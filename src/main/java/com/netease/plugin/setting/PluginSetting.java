@@ -21,8 +21,8 @@ public class PluginSetting implements PersistentStateComponent<PluginSetting> {
     public String assetsPath = "assets";
     public String className = "Assets";
     public String filePath = "generated";
-    public boolean namedWithParent;
-    public boolean autoDetection;
+    public boolean namedWithParent = true;
+    public boolean autoDetection = true;
 
     public static PluginSetting getInstance() {
         return ServiceManager.getService(PluginSetting.class);
