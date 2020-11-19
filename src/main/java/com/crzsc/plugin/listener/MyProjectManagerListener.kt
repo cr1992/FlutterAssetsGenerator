@@ -1,4 +1,4 @@
-package com.netease.plugin.listener
+package com.crzsc.plugin.listener
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManagerListener

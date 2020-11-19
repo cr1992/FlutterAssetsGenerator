@@ -1,11 +1,11 @@
-package com.netease.plugin.utils
+package com.crzsc.plugin.utils
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.search.FilenameIndex
-import com.netease.plugin.setting.PluginSetting
+import com.crzsc.plugin.setting.PluginSetting
 import io.flutter.pub.PubRoot
 import io.flutter.utils.FlutterModuleUtils
 import org.yaml.snakeyaml.Yaml

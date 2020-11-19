@@ -1,4 +1,4 @@
-package com.netease.plugin.setting;
+package com.crzsc.plugin.setting;
 
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;

@@ -1,4 +1,4 @@
-package com.netease.plugin.utils;
+package com.crzsc.plugin.utils;
 
 import com.intellij.notification.*;
 import com.intellij.openapi.application.ApplicationManager;

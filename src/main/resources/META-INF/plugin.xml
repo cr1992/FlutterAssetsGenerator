@@ -1,7 +1,7 @@
 <idea-plugin>
-    <id>com.netease.ray.Flutter_assets_generator</id>
-    <name>Flutter assets generator</name>
-    <vendor email="cr1992@qq.com" url="http://game.163.com/">Netease@cairui</vendor>
+    <id>com.crzsc.FlutterAssetsGenerator</id>
+    <name>FlutterAssetsGenerator</name>
+    <vendor email="cr1992@qq.com" url="http://game.163.com/">Ray</vendor>
 
     <description><![CDATA[
     It's a plug-in that generates an asset index which we can easily find.<br>
@@ -19,20 +19,20 @@
     <depends>io.flutter</depends>
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
-        <applicationService serviceImplementation="com.netease.plugin.setting.PluginSetting"/>
-        <applicationConfigurable parentId="tools" instance="com.netease.plugin.setting.AppSettingsConfigurable"
-                                 id="com.netease.plugin.setting.AppSettingsConfigurable"
+        <applicationService serviceImplementation="com.crzsc.plugin.setting.PluginSetting"/>
+        <applicationConfigurable parentId="tools" instance="com.crzsc.plugin.setting.AppSettingsConfigurable"
+                                 id="com.crzsc.plugin.setting.AppSettingsConfigurable"
                                  displayName="Flutter assets generator"/>
     </extensions>
 
     <applicationListeners>
-        <listener class="com.netease.plugin.listener.MyProjectManagerListener"
+        <listener class="com.crzsc.plugin.listener.MyProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </applicationListeners>
 
     <actions>
         <!-- Add your actions here -->
-        <action id="action.generate" class="com.netease.plugin.GenerateAction" text="Generate Flutter Assets"
+        <action id="action.generate" class="com.crzsc.plugin.actions.GenerateAction" text="Generate Flutter Assets"
                 description="Generate Assets class ">
             <add-to-group group-id="BuildMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="alt g"/>

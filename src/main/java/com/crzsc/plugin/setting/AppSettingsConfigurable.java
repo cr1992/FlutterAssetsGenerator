@@ -1,4 +1,4 @@
-package com.netease.plugin.setting;
+package com.crzsc.plugin.setting;
 
 import com.intellij.openapi.options.Configurable;
 import org.jetbrains.annotations.Nls;
@@ -16,7 +16,7 @@ public class AppSettingsConfigurable implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "Flutter Assets Generator";
+        return "FlutterAssetsGenerator";
     }
 
     @Override

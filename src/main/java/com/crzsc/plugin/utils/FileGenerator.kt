@@ -1,13 +1,11 @@
-package com.netease.plugin
+package com.crzsc.plugin.utils
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
-import com.netease.plugin.setting.PluginSetting
-import com.netease.plugin.utils.FileHelpers
-import com.netease.plugin.utils.PluginUtils
+import com.crzsc.plugin.setting.PluginSetting
 
 class FileGenerator(private val project: Project) {
     fun generate() {

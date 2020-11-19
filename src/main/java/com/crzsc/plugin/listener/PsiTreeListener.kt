@@ -1,13 +1,13 @@
-package com.netease.plugin.listener
+package com.crzsc.plugin.listener
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.psi.PsiTreeChangeListener
 import com.intellij.util.castSafelyTo
-import com.netease.plugin.FileGenerator
-import com.netease.plugin.setting.PluginSetting
-import com.netease.plugin.utils.FileHelpers
+import com.crzsc.plugin.utils.FileGenerator
+import com.crzsc.plugin.setting.PluginSetting
+import com.crzsc.plugin.utils.FileHelpers
 import java.util.*
 import kotlin.concurrent.timerTask
 
