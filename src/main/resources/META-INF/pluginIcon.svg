@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 1080 1080" style="enable-background:new 0 0 1080 1080;" xml:space="preserve">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
+     y="0px"
+     viewBox="0 0 1080 1080" style="enable-background:new 0 0 1080 1080;" xml:space="preserve">
 <style type="text/css">
 	.st0{clip-path:url(#SVGID_2_);}
 	.st1{fill:#39CEFD;}
@@ -12,77 +13,89 @@
 	.st6{fill:#16B9FD;}
 	.st7{fill:url(#SVGID_12_);}
 </style>
-<g>
+    <g>
 	<g>
 		<g>
 			<defs>
 				<path id="SVGID_1_" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500
 					L959.4,500z M639.9,20.7L120.6,540l159.8,159.8L959.4,20.7H639.9z"/>
 			</defs>
-			<clipPath id="SVGID_2_">
-				<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+            <clipPath id="SVGID_2_">
+				<use xlink:href="#SVGID_1_" style="overflow:visible;"/>
 			</clipPath>
-			<g class="st0">
+            <g class="st0">
 				<g>
-					<polygon class="st1" points="959.4,500 959.4,500 959.4,500 639.9,500 360.3,779.7 520,939.5 					"/>
+					<polygon class="st1"
+                             points="959.4,500 959.4,500 959.4,500 639.9,500 360.3,779.7 520,939.5 					"/>
 				</g>
 			</g>
 		</g>
-		<g>
+        <g>
 			<defs>
 				<path id="SVGID_3_" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500
 					L959.4,500z M639.9,20.7L120.6,540l159.8,159.8L959.4,20.7H639.9z"/>
 			</defs>
-			<clipPath id="SVGID_4_">
-				<use xlink:href="#SVGID_3_"  style="overflow:visible;"/>
+            <clipPath id="SVGID_4_">
+				<use xlink:href="#SVGID_3_" style="overflow:visible;"/>
 			</clipPath>
-			<polygon class="st2" points="280.4,699.8 120.6,540 639.9,20.7 959.4,20.7 			"/>
+            <polygon class="st2" points="280.4,699.8 120.6,540 639.9,20.7 959.4,20.7 			"/>
 		</g>
-		<g>
+        <g>
 			<defs>
 				<path id="SVGID_5_" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500
 					L959.4,500z M639.9,20.7L120.6,540l159.8,159.8L959.4,20.7H639.9z"/>
 			</defs>
-			<clipPath id="SVGID_6_">
-				<use xlink:href="#SVGID_5_"  style="overflow:visible;"/>
+            <clipPath id="SVGID_6_">
+				<use xlink:href="#SVGID_5_" style="overflow:visible;"/>
 			</clipPath>
-			<polygon class="st3" points="520,939.5 639.9,1059.3 959.4,1059.3 959.4,1059.3 679.8,779.7 			"/>
+            <polygon class="st3" points="520,939.5 639.9,1059.3 959.4,1059.3 959.4,1059.3 679.8,779.7 			"/>
 		</g>
-		<g>
+        <g>
 			<defs>
 				<path id="SVGID_7_" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500
 					L959.4,500z M639.9,20.7L120.6,540l159.8,159.8L959.4,20.7H639.9z"/>
 			</defs>
-			<clipPath id="SVGID_8_">
-				<use xlink:href="#SVGID_7_"  style="overflow:visible;"/>
+            <clipPath id="SVGID_8_">
+				<use xlink:href="#SVGID_7_" style="overflow:visible;"/>
 			</clipPath>
-			
-				<linearGradient id="SVGID_9_" gradientUnits="userSpaceOnUse" x1="9514.54" y1="-6371.355" x2="9990.5996" y2="-5895.2949" gradientTransform="matrix(0.25 0 0 -0.25 -1812 -622.5)">
-				<stop  offset="0" style="stop-color:#1A237E;stop-opacity:0.4"/>
-				<stop  offset="1" style="stop-color:#1A237E;stop-opacity:0"/>
+
+            <linearGradient id="SVGID_9_" gradientUnits="userSpaceOnUse" x1="9514.54" y1="-6371.355" x2="9990.5996"
+                            y2="-5895.2949" gradientTransform="matrix(0.25 0 0 -0.25 -1812 -622.5)">
+				<stop offset="0" style="stop-color:#1A237E;stop-opacity:0.4"/>
+                <stop offset="1" style="stop-color:#1A237E;stop-opacity:0"/>
 			</linearGradient>
-			<polygon class="st4" points="520,939.5 757,857.4 679.8,779.7 			"/>
+            <polygon class="st4" points="520,939.5 757,857.4 679.8,779.7 			"/>
 		</g>
-		<g>
+        <g>
 			<defs>
 				<path id="SVGID_10_" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500
 					L959.4,500z M639.9,20.7L120.6,540l159.8,159.8L959.4,20.7H639.9z"/>
 			</defs>
-			<clipPath id="SVGID_11_">
-				<use xlink:href="#SVGID_10_"  style="overflow:visible;"/>
+            <clipPath id="SVGID_11_">
+				<use xlink:href="#SVGID_10_" style="overflow:visible;"/>
 			</clipPath>
-			<g class="st5">
+            <g class="st5">
 				
-					<rect x="407.1" y="666.7" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -399.0023 596.0814)" class="st6" width="226" height="226"/>
+					<rect x="407.1" y="666.7" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -399.0023 596.0814)"
+                          class="st6" width="226" height="226"/>
 			</g>
 		</g>
 	</g>
-	
-		<radialGradient id="SVGID_12_" cx="7824.6587" cy="-2855.979" r="5082.8887" gradientTransform="matrix(0.25 0 0 -0.25 -1812 -622.5)" gradientUnits="userSpaceOnUse">
-		<stop  offset="0" style="stop-color:#FFFFFF;stop-opacity:0.1"/>
-		<stop  offset="1" style="stop-color:#FFFFFF;stop-opacity:0"/>
+
+        <radialGradient id="SVGID_12_" cx="7824.6587" cy="-2855.979" r="5082.8887"
+                        gradientTransform="matrix(0.25 0 0 -0.25 -1812 -622.5)" gradientUnits="userSpaceOnUse">
+		<stop offset="0" style="stop-color:#FFFFFF;stop-opacity:0.1"/>
+            <stop offset="1" style="stop-color:#FFFFFF;stop-opacity:0"/>
 	</radialGradient>
-	<path class="st7" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500L959.4,500
+        <path class="st7" d="M959.4,500L679.8,779.7l279.6,279.7l0,0H639.9L520,939.5l0,0L360.2,779.7L639.9,500H959.4L959.4,500L959.4,500
 		z M639.9,20.7L120.6,540l159.8,159.8L959.4,20.7H639.9z"/>
+
 </g>
+    <g fill="none" fill-rule="evenodd">
+<!--        <path fill="#9AA7B0" fill-opacity=".8" d="M7.98462,4 L6.69629,2.71143 C6.22158519,2.28563452 5.61574625,2.0346507 4.979,2 L1.05127,2 C1.037675,1.99999735 1.02463577,2.0053954 1.01502078,2.01500664 C1.00540579,2.02461787 1.00000265,2.037655 1,2.05125 L1,13 L9,13 L9,8 L15,8 L15,4 L7.98462,4 Z"/>-->
+        <rect width="408" height="68" x="768" y="884" fill="#D9A343"/>
+        <rect width="408" height="68" x="768" y="1020" fill="#D9A343"/>
+        <rect width="408" height="68" x="768" y="748" fill="#D9A343"/>
+        <rect width="408" height="68" x="768" y="612" fill="#D9A343"/>
+    </g>
 </svg>
