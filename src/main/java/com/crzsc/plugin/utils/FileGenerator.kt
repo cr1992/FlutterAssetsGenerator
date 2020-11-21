@@ -1,11 +1,13 @@
 package com.crzsc.plugin.utils
 
+import com.crzsc.plugin.setting.PluginSetting
+import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
+import com.crzsc.plugin.utils.PluginUtils.toUpperCaseFirst
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
-import com.crzsc.plugin.setting.PluginSetting
 
 class FileGenerator(private val project: Project) {
     fun generate() {
@@ -52,18 +54,25 @@ class FileGenerator(private val project: Project) {
             if (it.isDirectory) {
                 generateFileMap(it, map)
             } else {
+                var key = it.nameWithoutExtension.toLowCamelCase()///fileName style
+                val value = it.path.removePrefix("${project.basePath}/")
                 if (PluginSetting.getInstance().namedWithParent) {
                     it.parent?.let { parent ->
                         if (parent.name == PluginSetting.getInstance().assetsPath) {
-                            map["${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                            map[key] = value
                         } else {
-                            map["${parent.name}_${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                            key = "${parent.name}${key.toUpperCaseFirst()}"
+                            if (map.containsKey(key)) {
+                                key = "${parent.parent.name}${key.toUpperCaseFirst()}"
+                            }
+                            map[key] = value
                         }
                     }
                 } else {
-                    map["${it.nameWithoutExtension}_${it.extension}"] = it.path.removePrefix("${project.basePath}/")
+                    map[key] = value
                 }
             }
         }
     }
+
 }
