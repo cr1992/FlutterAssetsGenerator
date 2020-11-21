@@ -5,6 +5,10 @@ import com.intellij.notification.NotificationGroup
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
 
 object PluginUtils {
 
@@ -44,6 +48,14 @@ object PluginUtils {
             }
             return sb.toString()
         }
+    }
+
+    /**
+     * 新窗口打开文件
+     */
+    fun PsiElement.openFile(vFile: VirtualFile) {
+        FileEditorManager.getInstance(project)
+                .openTextEditor(OpenFileDescriptor(project, vFile), true)
     }
 
     /**

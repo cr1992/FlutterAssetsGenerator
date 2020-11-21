@@ -1,13 +1,11 @@
 package com.crzsc.plugin.provider
 
+import com.crzsc.plugin.utils.PluginUtils.openFile
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.util.Iconable
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -45,8 +43,6 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 return LineMarkerInfo(
                         anchor, anchor.textRange,
                         icon, {
-                    //悬停，会多次调用
-                    element.showPop(vFile)
                     return@LineMarkerInfo ""
                 }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
             }
@@ -55,28 +51,10 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                     anchor, anchor.textRange,
                     IconUtil.getIcon(vFile, Iconable.ICON_FLAG_VISIBILITY, element.project), {
                 //悬停，会多次调用
-                element.showPop(vFile)
                 return@LineMarkerInfo ""
             }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
         }
         return null
     }
-
-    /**
-     * TODO 显示pop
-     */
-    private fun PsiElement.showPop(vFile: VirtualFile) {
-        println("tooltipProvider:${text}")
-
-    }
-
-    /**
-     * 新窗口打开文件
-     */
-    private fun PsiElement.openFile(vFile: VirtualFile) {
-        FileEditorManager.getInstance(project)
-                .openTextEditor(OpenFileDescriptor(project, vFile), true)
-    }
-
 
 }
