@@ -11,6 +11,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 
 class FileGenerator(private val project: Project) {
+    private val ignoreDir = listOf("2.0x", "3.0x", "Mx", "Nx")
     fun generate() {
         WriteCommandAction.runWriteCommandAction(project) {
             val map = mutableMapOf<String, String>()
@@ -55,7 +56,7 @@ class FileGenerator(private val project: Project) {
 
     private fun generateFileMap(root: VirtualFile, map: MutableMap<String, String>) {
         root.children.filter {
-            !it.name.startsWith('.')
+            !it.name.startsWith('.') && checkName(it.name)
         }.forEach {
             if (it.isDirectory) {
                 generateFileMap(it, map)
@@ -75,6 +76,10 @@ class FileGenerator(private val project: Project) {
                 }
             }
         }
+    }
+
+    private fun checkName(name: String): Boolean {
+        return !ignoreDir.contains(name)
     }
 
 }
