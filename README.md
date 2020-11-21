@@ -1,28 +1,37 @@
-# Flutter Assets generator
+# FlutterAssetsGenerator
+
 It's a plug-in that generates an asset index which we can easily find.It can be used on Android Studio or Idea.
-## installing
+
+## Installing
+
 Drag it to your IDE to install.
+
 ## How to use
-- Build -> Generate Assets class
-- Alt/Opt + G
+
+1.  define your assets dir in `pubspec.yaml`.
+
+2.  - Build -> Generate Assets class
+    - Alt/Opt + G
 
 It will generate assets.dart on lib/generated.
+
+<img src="https://i.loli.net/2020/11/21/MRJS2wDjQh9ecan.png" alt="image-20201121172520136" style="zoom: 50%;" />
+
 Simply use it like: 
+
 ```dart
 Image.asset(
-          Assets.loading_gif,
+          Assets.imageLoading,
           width: 24,
           height: 24,
           fit: BoxFit.contain,
         )
 ```
-You can also define it in your keymaps.
+
+Plugin will observe your changes on assets path and update file.
 
 ## Settings
-You can set your configuration in Preferences -> Tools -> Flutter assets generator.
 
-- Assets path 
-- Generated file path 
-- Generated class name 
-- Auto-detection 
-- Named with parent
+<img src="https://i.loli.net/2020/11/21/RIk7PgQHXwC6e5T.png" alt="image-20201121172929717" style="zoom: 50%;" />
+
+You can customize generated fils's path, split it with "/".

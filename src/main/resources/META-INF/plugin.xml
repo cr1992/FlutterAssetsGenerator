@@ -4,7 +4,37 @@
     <vendor email="cr1992@qq.com" url="http://game.163.com/">Ray</vendor>
 
     <description><![CDATA[
-    It's a plug-in that generates an asset index which we can easily find.<br>
+    <h1>FlutterAssetsGenerator</h1>
+<p>It&#39;s a plug-in that generates an asset index which we can easily find.It can be used on Android Studio or Idea.</p>
+<h2>Installing</h2>
+<p>Drag it to your IDE to install.</p>
+<h2>How to use</h2>
+<ol>
+<li><p>define your assets dir in <code>pubspec.yaml</code>.</p>
+</li>
+<li><ul>
+<li>Build -&gt; Generate Assets class</li>
+<li>Alt/Opt + G</li>
+
+</ul>
+</li>
+
+</ol>
+<p>It will generate assets.dart on lib/generated.</p>
+<p><img src="https://i.loli.net/2020/11/21/MRJS2wDjQh9ecan.png" alt="image-20201121172520136" style="zoom: 50%;" /></p>
+<p>Simply use it like: </p>
+<pre><code class='language-dart' lang='dart'>Image.asset(
+          Assets.imageLoading,
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+        )
+</code></pre>
+<p>Plugin will observe your changes on assets path and update file.</p>
+<h2>Settings</h2>
+<p><img src="https://i.loli.net/2020/11/21/RIk7PgQHXwC6e5T.png" alt="image-20201121172929717" style="zoom: 50%;" /></p>
+<p>You can customize generated fils&#39;s path, split it with &quot;/&quot;.</p>
+
     ]]></description>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
