@@ -8,6 +8,7 @@ import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.util.Iconable
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -62,7 +63,6 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 )
         return LineMarkerInfo(anchor, anchor.textRange, icon, {
             //悬停，会多次调用
-            element.showPop(vFile)
             return@LineMarkerInfo ""
         }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
 
@@ -77,7 +77,6 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 anchor, anchor.textRange,
                 icon, {
             //悬停，会多次调用
-            element.showPop(vFile)
             return@LineMarkerInfo ""
         }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
 
