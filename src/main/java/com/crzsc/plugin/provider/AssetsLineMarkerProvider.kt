@@ -1,6 +1,8 @@
 package com.crzsc.plugin.provider
 
 import com.crzsc.plugin.utils.PluginUtils.openFile
+import com.crzsc.plugin.utils.isImageExtension
+import com.crzsc.plugin.utils.isSvgExtension
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
@@ -9,12 +11,11 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.ui.scale.ScaleContext
 import com.intellij.util.IconUtil
 import com.intellij.util.SVGLoader
-import java.io.File
 import javax.swing.Icon
 import javax.swing.ImageIcon
-import kotlin.math.max
 
 
 /**
@@ -29,32 +30,57 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         if (element.containingFile.name.contains("Assets.dart", true)
                 && (element as? LeafPsiElement?)?.elementType?.toString() == "REGULAR_STRING_PART"
         ) {
-            val anchor = PsiTreeUtil.getDeepestFirst(element)
-            val filePath = element.project.basePath + "/" + element.text
-            val vFile = LocalFileSystem.getInstance().findFileByPath(filePath) ?: return null
-            //svg则展示缩小的icon
-            if (element.text.endsWith(".svg", true)) {
-                var icon: Icon = ImageIcon(
-                        SVGLoader.load(File(element.project.basePath + "/" + element.text).toURL(), 1.0F)
-                )
-                if (icon.iconWidth > 16) {
-                    icon = IconUtil.scale(icon, 16.0 / max(icon.iconWidth, icon.iconHeight))
-                }
-                return LineMarkerInfo(
-                        anchor, anchor.textRange,
-                        icon, {
-                    return@LineMarkerInfo ""
-                }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
-            }
-            //其他文件展示文件格式
-            return LineMarkerInfo(
-                    anchor, anchor.textRange,
-                    IconUtil.getIcon(vFile, Iconable.ICON_FLAG_VISIBILITY, element.project), {
-                //悬停，会多次调用
-                return@LineMarkerInfo ""
-            }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
+            return showMakeByType(element)
         }
         return null
+    }
+
+    private fun showMakeByType(element: PsiElement): LineMarkerInfo<*>? {
+        val assetsPath = element.text
+        val anchor = PsiTreeUtil.getDeepestFirst(element)
+        val filePath = element.project.basePath + "/" + element.text
+        val vFile = LocalFileSystem.getInstance().findFileByPath(filePath) ?: return null
+        return when {
+            assetsPath.isSvgExtension -> showSvgMark(element, anchor, vFile)
+            assetsPath.isImageExtension -> showImageMark(element, anchor, vFile)
+            else -> null
+        }
+    }
+
+
+    private fun showSvgMark(element: PsiElement, anchor: PsiElement,
+                            vFile: VirtualFile): LineMarkerInfo<*>? {
+        val icon: Icon =
+                ImageIcon(
+                        SVGLoader.load(
+                                null,
+                                vFile.inputStream,
+                                ScaleContext.createIdentity(),
+                                16.0,
+                                16.0
+                        )
+                )
+        return LineMarkerInfo(anchor, anchor.textRange, icon, {
+            //悬停，会多次调用
+            element.showPop(vFile)
+            return@LineMarkerInfo ""
+        }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
+
+    }
+
+
+    private fun showImageMark(element: PsiElement, anchor: PsiElement,
+                              vFile: VirtualFile): LineMarkerInfo<*>? {
+        val icon = IconUtil.getIcon(vFile, Iconable.ICON_FLAG_VISIBILITY, element.project)
+        //其他文件展示文件格式
+        return LineMarkerInfo(
+                anchor, anchor.textRange,
+                icon, {
+            //悬停，会多次调用
+            element.showPop(vFile)
+            return@LineMarkerInfo ""
+        }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
+
     }
 
 }
