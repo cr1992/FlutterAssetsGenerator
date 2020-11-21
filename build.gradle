@@ -9,7 +9,7 @@ apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.intellij'
 
 group 'com.crzsc'
-version '1.0.0-SNAPSHOT'
+version '1.0.0'
 
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
@@ -52,8 +52,7 @@ runIde {
 
 patchPluginXml {
     changeNotes """
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>"""
+    """
 }
 
 def productMatrixFile = 'product-matrix.json'

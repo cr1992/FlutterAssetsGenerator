@@ -34,4 +34,4 @@ Plugin will observe your changes on assets path and update file.
 
 <img src="https://i.loli.net/2020/11/21/RIk7PgQHXwC6e5T.png" alt="image-20201121172929717" style="zoom: 50%;" />
 
-You can customize generated fils's path, split it with "/".
+You can customize the generated file's path, split it with "/".
