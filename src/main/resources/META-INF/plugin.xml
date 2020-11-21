@@ -22,7 +22,7 @@
         <applicationService serviceImplementation="com.crzsc.plugin.setting.PluginSetting"/>
         <applicationConfigurable parentId="tools" instance="com.crzsc.plugin.setting.AppSettingsConfigurable"
                                  id="com.crzsc.plugin.setting.AppSettingsConfigurable"
-                                 displayName="Flutter assets generator"/>
+                                 displayName="FlutterAssetsGenerator"/>
         <!--        行标记-->
         <codeInsight.lineMarkerProvider language="Dart"
                                         implementationClass="com.crzsc.plugin.provider.AssetsLineMarkerProvider"/>

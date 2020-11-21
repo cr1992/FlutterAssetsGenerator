@@ -34,8 +34,7 @@ public class AppSettingsConfigurable implements Configurable {
     @Override
     public boolean isModified() {
         PluginSetting settings = PluginSetting.getInstance();
-        boolean modified = !mySettingsComponent.getAssetsPath().equals(settings.assetsPath);
-        modified |= mySettingsComponent.getAutoDetection() != settings.autoDetection;
+        boolean modified = mySettingsComponent.getAutoDetection() != settings.autoDetection;
         modified |= !mySettingsComponent.getClassName().equals(settings.className);
         modified |= !mySettingsComponent.getFilePath().equals(settings.filePath);
         modified |= mySettingsComponent.getNamedWithParent() != settings.namedWithParent;
@@ -45,7 +44,6 @@ public class AppSettingsConfigurable implements Configurable {
     @Override
     public void apply() {
         PluginSetting settings = PluginSetting.getInstance();
-        settings.assetsPath = mySettingsComponent.getAssetsPath();
         settings.autoDetection = mySettingsComponent.getAutoDetection();
         settings.className = mySettingsComponent.getClassName();
         settings.filePath = mySettingsComponent.getFilePath();
@@ -55,7 +53,6 @@ public class AppSettingsConfigurable implements Configurable {
     @Override
     public void reset() {
         PluginSetting settings = PluginSetting.getInstance();
-        mySettingsComponent.setAssetsPath(settings.assetsPath);
         mySettingsComponent.setAutoDetection(settings.autoDetection);
         mySettingsComponent.setClassName(settings.className);
         mySettingsComponent.setFilePath(settings.filePath);

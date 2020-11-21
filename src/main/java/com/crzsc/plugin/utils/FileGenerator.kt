@@ -1,6 +1,7 @@
 package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.setting.PluginSetting
+import com.crzsc.plugin.utils.PluginUtils.showNotify
 import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
 import com.crzsc.plugin.utils.PluginUtils.toUpperCaseFirst
 import com.intellij.openapi.command.WriteCommandAction
@@ -13,9 +14,14 @@ class FileGenerator(private val project: Project) {
     fun generate() {
         WriteCommandAction.runWriteCommandAction(project) {
             val map = mutableMapOf<String, String>()
-            generateFileMap(FileHelpers.getAssetsFolder(project), map)
+            val file = FileHelper.getAssetsFolder(project)
+            if (file == null) {
+                showNotify("Please configure your assets path in pubspec.yaml")
+                return@runWriteCommandAction
+            }
+            generateFileMap(file, map)
             if (map.isEmpty()) {
-                PluginUtils.showNotify("assets path is empty")
+                showNotify("assets path is empty")
                 return@runWriteCommandAction
             }
             val content = StringBuilder()
@@ -31,7 +37,7 @@ class FileGenerator(private val project: Project) {
             content.append("\n}\n")
             val psiManager = PsiManager.getInstance(project)
             val psiDocumentManager = PsiDocumentManager.getInstance(project)
-            FileHelpers.getGeneratedFile(project).let { file ->
+            FileHelper.getGeneratedFile(project).let { file ->
                 psiManager.findFile(file)?.let { dartFile ->
                     psiDocumentManager.getDocument(dartFile)?.let { document ->
                         if (document.text != content.toString()) {
@@ -58,15 +64,11 @@ class FileGenerator(private val project: Project) {
                 val value = it.path.removePrefix("${project.basePath}/")
                 if (PluginSetting.getInstance().namedWithParent) {
                     it.parent?.let { parent ->
-                        if (parent.name == PluginSetting.getInstance().assetsPath) {
-                            map[key] = value
-                        } else {
-                            key = "${parent.name}${key.toUpperCaseFirst()}"
-                            if (map.containsKey(key)) {
-                                key = "${parent.parent.name}${key.toUpperCaseFirst()}"
-                            }
-                            map[key] = value
+                        key = "${parent.name}${key.toUpperCaseFirst()}"
+                        if (map.containsKey(key)) {
+                            key = "${parent.parent.name}${key.toUpperCaseFirst()}"
                         }
+                        map[key] = value
                     }
                 } else {
                     map[key] = value

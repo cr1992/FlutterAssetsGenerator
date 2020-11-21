@@ -14,11 +14,10 @@ import org.jetbrains.annotations.Nullable;
  * these persistent application settings are stored.
  */
 @State(
-        name = "com.netease.plugin.setting.PluginSetting",
+        name = "com.crzsc.plugin.setting.PluginSetting",
         storages = {@Storage("AssetsPluginSetting.xml")}
 )
 public class PluginSetting implements PersistentStateComponent<PluginSetting> {
-    public String assetsPath = "assets";
     public String className = "Assets";
     public String filePath = "generated";
     public boolean namedWithParent = true;

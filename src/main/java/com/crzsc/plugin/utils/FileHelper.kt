@@ -12,16 +12,33 @@ import org.yaml.snakeyaml.Yaml
 import java.io.FileInputStream
 
 
-object FileHelpers {
+object FileHelper {
+    var assetsPath: String? = null
+
     /**
      * 获取资源路径
      */
     @JvmStatic
-    fun getAssetsFolder(project: Project): VirtualFile {
+    fun getAssetsFolder(project: Project): VirtualFile? {
         val guessProjectDir = project.guessProjectDir()
-        val assetsPath = PluginSetting.getInstance().assetsPath
-        return guessProjectDir?.findChild(assetsPath)
-                ?: guessProjectDir!!.createChildDirectory(this, assetsPath)
+        getPubSpecConfig(project)?.let { pubSpecConfig ->
+            (pubSpecConfig.map["flutter"] as? Map<*, *>)?.let { configureMap ->
+                (configureMap["assets"] as? ArrayList<*>)?.let { list ->
+                    val path = list[0] as String
+                    val index = path.indexOf("/")
+                    assetsPath = if (index == -1) {
+                        path
+                    } else {
+                        path.substring(0, index)
+                    }
+                }
+            }
+        }
+        if (assetsPath == null) {
+            return null
+        }
+        return guessProjectDir?.findChild(assetsPath!!)
+                ?: guessProjectDir!!.createChildDirectory(this, assetsPath!!)
     }
 
     /**

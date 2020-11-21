@@ -7,11 +7,21 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 
 object PluginUtils {
+
     @JvmStatic
     fun showNotify(message: String?) {
-        val notificationGroup = NotificationGroup("Assets generator", NotificationDisplayType.BALLOON, true)
+        val notificationGroup = NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
         ApplicationManager.getApplication().invokeLater {
             val notification = notificationGroup.createNotification(message!!, NotificationType.INFORMATION)
+            Notifications.Bus.notify(notification)
+        }
+    }
+
+    @JvmStatic
+    fun showError(message: String?) {
+        val notificationGroup = NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
+        ApplicationManager.getApplication().invokeLater {
+            val notification = notificationGroup.createNotification(message!!, NotificationType.ERROR)
             Notifications.Bus.notify(notification)
         }
     }

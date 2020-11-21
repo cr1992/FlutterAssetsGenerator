@@ -10,7 +10,6 @@ import javax.swing.*;
 public class AppSettingsComponent {
 
     private final JPanel myMainPanel;
-    private final JBTextField assetsPathText = new JBTextField();
     private final JBTextField filePath = new JBTextField();
     private final JBTextField className = new JBTextField();
     private final JBCheckBox autoDetection = new JBCheckBox("Enable auto-detection");
@@ -18,7 +17,6 @@ public class AppSettingsComponent {
 
     public AppSettingsComponent() {
         myMainPanel = FormBuilder.createFormBuilder()
-                .addLabeledComponent(new JBLabel("Enter assets path: "), assetsPathText, 1, false)
                 .addLabeledComponent(new JBLabel("Enter generated file path: "), filePath, 1, false)
                 .addLabeledComponent(new JBLabel("Enter generated class name: "), className, 1, false)
                 .addComponent(autoDetection, 1)
@@ -32,16 +30,7 @@ public class AppSettingsComponent {
     }
 
     public JComponent getPreferredFocusedComponent() {
-        return assetsPathText;
-    }
-
-
-    public String getAssetsPath() {
-        return assetsPathText.getText().trim().replaceAll("/", "");
-    }
-
-    public void setAssetsPath(String newText) {
-        assetsPathText.setText(newText);
+        return filePath;
     }
 
     public String getFilePath() {
