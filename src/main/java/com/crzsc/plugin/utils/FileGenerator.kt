@@ -65,9 +65,9 @@ class FileGenerator(private val project: Project) {
                 val value = it.path.removePrefix("${project.basePath}/")
                 if (PluginSetting.getInstance().namedWithParent) {
                     it.parent?.let { parent ->
-                        key = "${parent.name}${key.toUpperCaseFirst()}"
+                        key = "${parent.name.toLowCamelCase()}${key.toUpperCaseFirst()}"
                         if (map.containsKey(key)) {
-                            key = "${parent.parent.name}${key.toUpperCaseFirst()}"
+                            key = "${parent.parent.name.toLowCamelCase()}${key.toUpperCaseFirst()}"
                         }
                         map[key] = value
                     }
