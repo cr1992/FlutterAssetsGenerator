@@ -38,15 +38,15 @@ class FileGenerator(private val project: Project) {
             content.append("\n}\n")
             val psiManager = PsiManager.getInstance(project)
             val psiDocumentManager = PsiDocumentManager.getInstance(project)
-            FileHelper.getGeneratedFile(project).let { file ->
-                psiManager.findFile(file)?.let { dartFile ->
+            FileHelper.getGeneratedFile(project).let { generated ->
+                psiManager.findFile(generated)?.let { dartFile ->
                     psiDocumentManager.getDocument(dartFile)?.let { document ->
                         if (document.text != content.toString()) {
                             document.setText(content)
                             psiDocumentManager.commitDocument(document)
-                            PluginUtils.showNotify("assets generate succeed")
+                            showNotify("assets generate succeed")
                         } else {
-                            PluginUtils.showNotify("nothing changed")
+                            showNotify("nothing changed")
                         }
                     }
                 }
