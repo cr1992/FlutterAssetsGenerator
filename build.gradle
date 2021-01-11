@@ -9,7 +9,7 @@ apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.intellij'
 
 group 'com.crzsc'
-version '1.0.0'
+version '1.0.0-203'
 
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
@@ -52,6 +52,7 @@ runIde {
 
 patchPluginXml {
     changeNotes """
+    support more IDE versions
     """
 }
 
