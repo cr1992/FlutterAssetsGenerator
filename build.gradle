@@ -56,9 +56,9 @@ patchPluginXml {
     """
 }
 
-def productMatrixFile = 'product-matrix.json'
+def productMatrixFile = "${projectDir.absolutePath}${File.separator}product-matrix.json"
 def jsonFile = new File(productMatrixFile)
-if (jsonFile == null) {
+if (!jsonFile.exists()) {
     // noinspection GroovyAssignabilityCheck
     throw new GradleException("Unable to read $productMatrixFile, is it missing?")
 }
