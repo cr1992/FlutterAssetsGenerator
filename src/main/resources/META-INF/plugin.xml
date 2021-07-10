@@ -71,5 +71,9 @@
             <add-to-group group-id="BuildMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="alt g"/>
         </action>
+        <action id="action.generateDir" class="com.crzsc.plugin.actions.GenerateDirAction" text="Generate Flutter Assets Dir"
+                description="Generate Assets dir">
+            <add-to-group group-id="BuildMenu" anchor="last"/>
+        </action>
     </actions>
 </idea-plugin>

@@ -6,9 +6,16 @@ import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
 import com.crzsc.plugin.utils.PluginUtils.toUpperCaseFirst
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.kotlin.idea.core.util.toPsiFile
+import org.jetbrains.yaml.YAMLElementGenerator
+import org.jetbrains.yaml.psi.YAMLFile
+import org.jetbrains.yaml.psi.YAMLMapping
+import org.jetbrains.yaml.psi.YAMLSequence
 
 class FileGenerator(private val project: Project) {
     private val ignoreDir = listOf("2.0x", "3.0x", "Mx", "Nx")
@@ -76,6 +83,53 @@ class FileGenerator(private val project: Project) {
                 }
             }
         }
+    }
+
+    fun buildYaml() {
+        val guessProjectDir = project.guessProjectDir() ?: return
+        val assetsFile = guessProjectDir.children.firstOrNull { it.name == "assets" } ?: return
+        val fileAssetsDir =
+            FileHelper.getAssetsFiles(assetsFile)?.map { "${it.path}/".replaceFirst("${guessProjectDir.path}/", "") }
+                ?.toMutableList()?.takeIf { it.isNotEmpty() } ?: return
+        //由于本地修改后有几秒缓存，所以每次数据都修改，不判断是否有变动
+        /*al mergeDir=fileAssetsDir.toMutableList()
+        FileHelper.getPubSpecConfig(project)?.let { pubSpecConfig ->
+            (pubSpecConfig.map["flutter"] as? Map<*, *>)?.let { configureMap ->
+                val assets = (configureMap["assets"] as? ArrayList<*>) ?: return
+                assets.forEach { ass ->
+                    mergeDir.remove(ass)
+                }
+            }
+        }
+        if(mergeDir.isEmpty()){
+            println("-----没有需要添加的数据")
+            return
+        }*/
+        fileAssetsDir.forEach {
+            println("全部文件夹：$it")
+        }
+        val yaml = guessProjectDir.children.firstOrNull { it.name == "pubspec.yaml" } ?: return
+        val yamlFile = (yaml.toPsiFile(project) as? YAMLFile) ?: return
+        val psiElement =
+            yamlFile.node.getChildren(null)
+                .firstOrNull()?.psi?.children?.firstOrNull()?.children?.firstOrNull { it.text.startsWith("flutter:") }
+                ?: return
+        val yamlMapping = psiElement.children.first() as YAMLMapping
+        val assetsValue = yamlMapping.keyValues.firstOrNull { it.keyText == "assets" }?:return
+        WriteCommandAction.runWriteCommandAction(project) {
+            val stringBuilder = StringBuilder("assets:")
+            fileAssetsDir.forEach {
+                stringBuilder.append("\n    - $it")
+            }
+            val yamlValue = PsiTreeUtil.collectElementsOfType(
+                YAMLElementGenerator.getInstance(project)
+                    .createDummyYamlWithText(stringBuilder.toString()), YAMLSequence::class.java
+            ).iterator().next()
+            assetsValue.setValue(yamlValue)
+
+        }
+
+
     }
 
     private fun checkName(name: String): Boolean {
