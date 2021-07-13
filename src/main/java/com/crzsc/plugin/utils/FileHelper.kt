@@ -1,11 +1,11 @@
 package com.crzsc.plugin.utils
 
+import com.crzsc.plugin.setting.PluginSetting
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.search.FilenameIndex
-import com.crzsc.plugin.setting.PluginSetting
 import io.flutter.pub.PubRoot
 import io.flutter.utils.FlutterModuleUtils
 import org.yaml.snakeyaml.Yaml
@@ -38,7 +38,30 @@ object FileHelper {
             return null
         }
         return guessProjectDir?.findChild(assetsPath!!)
-                ?: guessProjectDir!!.createChildDirectory(this, assetsPath!!)
+            ?: guessProjectDir!!.createChildDirectory(this, assetsPath!!)
+    }
+
+    /**
+     * 获取资源路径
+     */
+    @JvmStatic
+    fun getAssetsFiles(assetsFile: VirtualFile): List<VirtualFile>? {
+        val list = mutableListOf<VirtualFile>()
+        checkAddDir(list,assetsFile)
+        return list.takeIf { it.isNotEmpty() }
+    }
+
+    ///递归添加文件夹
+    private fun checkAddDir(list:MutableList<VirtualFile>,virtualFile: VirtualFile){
+        if (virtualFile.isDirectory) {
+            //不全是文件
+            if (virtualFile.children.any { c -> !c.isDirectory }) {
+                list.add(virtualFile)
+            }
+            virtualFile.children.forEach {
+                checkAddDir(list,it)
+            }
+        }
     }
 
     /**
@@ -53,13 +76,13 @@ object FileHelper {
             filePath = filePath.trim()
             if (!filePath.contains("/")) {
                 return@let lib.findChild(filePath)
-                        ?: lib.createChildDirectory(lib, filePath)
+                    ?: lib.createChildDirectory(lib, filePath)
             } else {
                 var file = lib
                 filePath.split("/").forEach { dir ->
                     if (dir.isNotEmpty()) {
                         file = file.findChild(dir)
-                                ?: file.createChildDirectory(file, dir)
+                            ?: file.createChildDirectory(file, dir)
                     }
                 }
                 return@let file
@@ -98,7 +121,7 @@ object FileHelper {
      */
     fun containsDirectoryFile(directory: PsiDirectory, fileName: String): Boolean {
         return directory.files.filter { it.name.endsWith(".dart") }
-                .firstOrNull { it.name.contains(fileName) } != null
+            .firstOrNull { it.name.contains(fileName) } != null
     }
 
     @Suppress("DuplicatedCode")
@@ -132,11 +155,12 @@ object FileHelper {
     private const val PROJECT_NAME = "name"
 
     data class PubSpecConfig(
-            val project: Project,
-            val pubRoot: PubRoot,
-            val map: Map<String, Any>,
-            //项目名称,导包需要
-            val name: String = ((if (map[PROJECT_NAME] == "null") null else map[PROJECT_NAME])
-                    ?: project.name).toString(),
-            val isFlutterModule: Boolean = FlutterModuleUtils.hasFlutterModule(project))
+        val project: Project,
+        val pubRoot: PubRoot,
+        val map: Map<String, Any>,
+        //项目名称,导包需要
+        val name: String = ((if (map[PROJECT_NAME] == "null") null else map[PROJECT_NAME])
+            ?: project.name).toString(),
+        val isFlutterModule: Boolean = FlutterModuleUtils.hasFlutterModule(project)
+    )
 }
