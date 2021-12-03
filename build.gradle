@@ -9,7 +9,7 @@ apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.intellij'
 
 group 'com.crzsc'
-version '1.0.0-203'
+version '1.1.0'
 
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
@@ -52,7 +52,7 @@ runIde {
 
 patchPluginXml {
     changeNotes """
-    support more IDE versions
+    remove untilBuild limit
     """
 }
 
@@ -115,4 +115,4 @@ intellij.plugins += "Dart:${productDetails.dartPluginVersion}"
 intellij.plugins += "io.flutter:${productDetails.flutterPluginVersion}"
 intellij.plugins += "Kotlin"
 patchPluginXml.sinceBuild = productDetails.sinceBuild
-patchPluginXml.untilBuild = productDetails.untilBuild
+patchPluginXml.untilBuild = ""
