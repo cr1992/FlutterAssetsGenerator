@@ -55,7 +55,7 @@ object PluginUtils {
      */
     fun PsiElement.openFile(vFile: VirtualFile) {
         FileEditorManager.getInstance(project)
-                .openTextEditor(OpenFileDescriptor(project, vFile), true)
+            .openTextEditor(OpenFileDescriptor(project, vFile), true)
     }
 
     /**

@@ -1,13 +1,12 @@
 package com.crzsc.plugin.listener
 
+import com.crzsc.plugin.utils.FileGenerator
+import com.crzsc.plugin.utils.FileHelper
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.psi.PsiTreeChangeListener
 import com.intellij.util.castSafelyTo
-import com.crzsc.plugin.utils.FileGenerator
-import com.crzsc.plugin.setting.PluginSetting
-import com.crzsc.plugin.utils.FileHelper
 import java.util.*
 import kotlin.concurrent.timerTask
 
@@ -59,7 +58,7 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     }
 
     private fun handleEvent(event: PsiTreeChangeEvent) {
-        if (!PluginSetting.getInstance().autoDetection || !FileHelper.shouldActivateFor(project)) {
+        if (!FileHelper.isAutoDetectionEnable(project) || !FileHelper.shouldActivateFor(project)) {
             return
         }
         event.child?.let { changedFile ->

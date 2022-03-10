@@ -1,6 +1,5 @@
 package com.crzsc.plugin.utils
 
-import com.crzsc.plugin.setting.PluginSetting
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -8,6 +7,7 @@ import com.intellij.psi.PsiDirectory
 import com.intellij.psi.search.FilenameIndex
 import io.flutter.pub.PubRoot
 import io.flutter.utils.FlutterModuleUtils
+import org.jetbrains.kotlin.konan.file.File
 import org.yaml.snakeyaml.Yaml
 import java.io.FileInputStream
 
@@ -47,42 +47,39 @@ object FileHelper {
     @JvmStatic
     fun getAssetsFiles(assetsFile: VirtualFile): List<VirtualFile>? {
         val list = mutableListOf<VirtualFile>()
-        checkAddDir(list,assetsFile)
+        checkAddDir(list, assetsFile)
         return list.takeIf { it.isNotEmpty() }
     }
 
     ///递归添加文件夹
-    private fun checkAddDir(list:MutableList<VirtualFile>,virtualFile: VirtualFile){
+    private fun checkAddDir(list: MutableList<VirtualFile>, virtualFile: VirtualFile) {
         if (virtualFile.isDirectory) {
             //不全是文件
             if (virtualFile.children.any { c -> !c.isDirectory }) {
                 list.add(virtualFile)
             }
             virtualFile.children.forEach {
-                checkAddDir(list,it)
+                checkAddDir(list, it)
             }
         }
     }
 
     /**
      * 获取generated自动生成目录
+     * 从yaml中读取
      */
     private fun getGeneratedFilePath(project: Project): VirtualFile {
         return PubRoot.forFile(getProjectIdeaFile(project))?.lib?.let { lib ->
-            var filePath = PluginSetting.getInstance().filePath
-            if (filePath.isNullOrEmpty()) {
-                return@let lib
-            }
-            filePath = filePath.trim()
-            if (!filePath.contains("/")) {
-                return@let lib.findChild(filePath)
-                    ?: lib.createChildDirectory(lib, filePath)
+            // 没有配置则返回默认path
+            val filePath: String = readSetting(project, Constants.KEY_OUTPUT_DIR) as String?
+                ?: return@let lib.findOrCreateChildDir(lib, Constants.DEFAULT_OUTPUT_DIR)
+            if (!filePath.contains(File.separator)) {
+                return@let lib.findOrCreateChildDir(lib, filePath)
             } else {
                 var file = lib
-                filePath.split("/").forEach { dir ->
+                filePath.split(File.separator).forEach { dir ->
                     if (dir.isNotEmpty()) {
-                        file = file.findChild(dir)
-                            ?: file.createChildDirectory(file, dir)
+                        file = file.findOrCreateChildDir(file, dir)
                     }
                 }
                 return@let file
@@ -90,9 +87,48 @@ object FileHelper {
         }!!
     }
 
+    private fun VirtualFile.findOrCreateChildDir(requestor: Any, name: String): VirtualFile {
+        val child = findChild(name)
+        return child ?: createChildDirectory(requestor, name)
+    }
+
+    /**
+     * 读取配置
+     */
+    private fun readSetting(project: Project, key: String): Any? {
+        getPubSpecConfig(project)?.let { pubSpecConfig ->
+            (pubSpecConfig.map[Constants.KEY_CONFIGURATION_MAP] as? Map<*, *>)?.let { configureMap ->
+                return configureMap[key]
+            }
+        }
+        return null
+    }
+
+    /**
+     * 是否开启了自动检测
+     */
+    fun isAutoDetectionEnable(project: Project): Boolean {
+        return readSetting(project, Constants.KEY_AUTO_DETECTION) as Boolean? ?: true
+    }
+
+    /**
+     * 是否根据父文件夹命名 默认true
+     */
+    fun isNamedWithParent(project: Project): Boolean {
+        return readSetting(project, Constants.KEY_NAMED_WITH_PARENT) as Boolean? ?: true
+    }
+
+    /**
+     * 读取生成的类名配置
+     */
+    fun getGeneratedClassName(project: Project): String {
+        return readSetting(project, Constants.KEY_CLASS_NAME) as String? ?: Constants.DEFAULT_CLASS_NAME
+    }
+
     fun getGeneratedFile(project: Project): VirtualFile {
         return getGeneratedFilePath(project).let {
-            return@let (it.findChild("assets.dart") ?: it.createChildData(this, "assets.dart"))
+            val configName = readSetting(project, Constants.KEY_OUTPUT_FILENAME)
+            return@let it.findOrCreateChildData(it, "${configName ?: Constants.DEFAULT_CLASS_NAME.toLowerCase()}.dart")
         }
     }
 

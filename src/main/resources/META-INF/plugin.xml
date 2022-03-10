@@ -4,12 +4,19 @@
     <vendor email="cr1992@qq.com" url="https://github.com/cr1992/FlutterAssetsGenerator">Ray&amp;Zsc</vendor>
 
     <description><![CDATA[
-   <h1>FlutterAssetsGenerator</h1>
-<p>It&#39;s a plug-in that generates an asset index which we can easily find.It can be used on Android Studio or Idea.</p>
-<h2>Installing</h2>
+
+<!doctype html>
+<html>
+<head>
+<meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
+<title>FlutterAssetsGenerator</title>
+</head>
+<body><h1 id='flutterassetsgenerator'>FlutterAssetsGenerator</h1>
+<p>It&#39;s a plugin that generates an asset index which we can easily find.It can be used on Android Studio or Idea.</p>
+<h2 id='installing'>Installing</h2>
 <p>Drag it to your IDE to install.</p>
-<h2>How to use</h2>
-<ol>
+<h2 id='how-to-use'>How to use</h2>
+<ol start='' >
 <li><p>define your assets dir in <code>pubspec.yaml</code>.</p>
 </li>
 <li><ul>
@@ -31,9 +38,22 @@
         )
 </code></pre>
 <p>Plugin will observe your changes on assets path and update file.</p>
-<h2>Settings</h2>
-<p><img src="https://i.loli.net/2020/11/21/dLClVI9qKWDanMg.png" referrerpolicy="no-referrer" alt="image-20201121183138765"></p>
-<p>You can customize generated fils&#39;s path, split it with &quot;/&quot;.</p>
+<h2 id='settings'>Settings</h2>
+<p>You can change default settings by add following contents in your <code>pubspec.yaml</code>.</p>
+<pre><code class='language-yaml' lang='yaml'>flutter_assets_generator:
+  # Optional. Sets the directory of generated localization files. Provided value should be a valid path on lib dir. Default: generated
+  output_dir: generated
+  # Optional. Sets whether utomatic monitoring of file changes. Default: true
+  auto_detection: true
+  # Optional. Sets file name conversion rules. Default: true
+  named_with_parent: true
+  # Optional. Sets the name for the generated localization file. Default: assets
+  output_filename: assets
+  # Optional. Sets the name for the generated localization class. Default: Assets
+  class_name: Assets
+</code></pre>
+</body>
+</html>
 
     ]]></description>
 
@@ -47,17 +67,6 @@
     <depends>Dart</depends>
     <depends>org.jetbrains.kotlin</depends>
     <depends>io.flutter</depends>
-    <extensions defaultExtensionNs="com.intellij">
-        <!-- Add your extensions here -->
-        <applicationService serviceImplementation="com.crzsc.plugin.setting.PluginSetting"/>
-        <applicationConfigurable parentId="tools" instance="com.crzsc.plugin.setting.AppSettingsConfigurable"
-                                 id="com.crzsc.plugin.setting.AppSettingsConfigurable"
-                                 displayName="FlutterAssetsGenerator"/>
-        <!--        行标记-->
-        <codeInsight.lineMarkerProvider language="Dart"
-                                        implementationClass="com.crzsc.plugin.provider.AssetsLineMarkerProvider"/>
-
-    </extensions>
 
     <applicationListeners>
         <listener class="com.crzsc.plugin.listener.MyProjectManagerListener"
