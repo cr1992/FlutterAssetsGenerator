@@ -8,13 +8,11 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 
 class GenerateAction : AnAction() {
-    private var fileGenerator: FileGenerator? = null
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(PlatformDataKeys.PROJECT)
         if (shouldActivateFor(project!!)) {
-            fileGenerator = fileGenerator ?: FileGenerator(project)
-            fileGenerator!!.generate()
+            FileGenerator(project).generate()
         } else {
             showNotify("This project is not the flutter project")
         }

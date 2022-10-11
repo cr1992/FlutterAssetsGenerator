@@ -35,6 +35,7 @@ object FileHelper {
                 }
             }
         }
+//        PluginUtils.showNotify("project $project assetsPath:$assetsPath")
         if (assetsPath == null) {
             return null
         }
