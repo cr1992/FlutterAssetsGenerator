@@ -33,11 +33,12 @@ object PluginUtils {
     /**
      * 转换小写驼峰式
      */
-    fun String.toLowCamelCase(): String {
+    fun String.toLowCamelCase(regex: Regex): String {
         return if (this.isEmpty()) {
             this
         } else {
-            val split = this.split("_")
+            val newStr = this.replace(Regex("[@]"), "")
+            val split = newStr.split(regex)
             val sb = StringBuilder()
             for (i in split.indices) {
                 if (i == 0) {

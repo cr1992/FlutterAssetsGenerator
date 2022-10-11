@@ -59,19 +59,21 @@ class FileGenerator(private val project: Project) {
 
     private fun generateFileMap(root: VirtualFile, map: MutableMap<String, String>) {
         val namedWithParent = FileHelper.isNamedWithParent(project)
+        val pattern = FileHelper.getFilenameSplitPattern(project)
+        val regex = Regex(pattern)
         root.children.filter {
             !it.name.startsWith('.') && checkName(it.name)
         }.forEach {
             if (it.isDirectory) {
                 generateFileMap(it, map)
             } else {
-                var key = it.nameWithoutExtension.toLowCamelCase()///fileName style
+                var key = it.nameWithoutExtension.toLowCamelCase(regex)///fileName style
                 val value = it.path.removePrefix("${project.basePath}/")
                 if (namedWithParent) {
                     it.parent?.let { parent ->
-                        key = "${parent.name.toLowCamelCase()}${key.toUpperCaseFirst()}"
+                        key = "${parent.name.toLowCamelCase(regex)}${key.toUpperCaseFirst()}"
                         if (map.containsKey(key)) {
-                            key = "${parent.parent.name.toLowCamelCase()}${key.toUpperCaseFirst()}"
+                            key = "${parent.parent.name.toLowCamelCase(regex)}${key.toUpperCaseFirst()}"
                         }
                         map[key] = value
                     }

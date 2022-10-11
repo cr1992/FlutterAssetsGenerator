@@ -46,4 +46,6 @@ flutter_assets_generator:
   output_filename: assets
   # Optional. Sets the name for the generated localization class. Default: Assets
   class_name: Assets
+  # Optional. Sets the filename split pattern for filename split. Default: [-_]
+  filename_split_pattern: "[-_]"
 ```

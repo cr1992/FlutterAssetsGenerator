@@ -31,8 +31,15 @@ object Constants {
     const val KEY_OUTPUT_FILENAME = "output_filename"
 
     /**
+     * 分割文件的正则
+     */
+    const val FILENAME_SPLIT_PATTERN = "filename_split_pattern"
+
+    /**
      * 默认目录
      */
     const val DEFAULT_OUTPUT_DIR = "generated"
     const val DEFAULT_CLASS_NAME = "Assets"
+
+    const val DEFAULT_FILENAME_SPLIT_PATTERN = "[-_]"
 }

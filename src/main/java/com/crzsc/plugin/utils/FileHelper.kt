@@ -10,6 +10,7 @@ import io.flutter.utils.FlutterModuleUtils
 import org.jetbrains.kotlin.konan.file.File
 import org.yaml.snakeyaml.Yaml
 import java.io.FileInputStream
+import java.util.regex.Pattern
 
 
 object FileHelper {
@@ -125,6 +126,23 @@ object FileHelper {
         return readSetting(project, Constants.KEY_CLASS_NAME) as String? ?: Constants.DEFAULT_CLASS_NAME
     }
 
+    /**
+     * 读取文件分割配置
+     */
+    fun getFilenameSplitPattern(project: Project): String {
+        return try {
+            val config =
+                readSetting(project, Constants.FILENAME_SPLIT_PATTERN) as String?
+                    ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
+            Pattern.compile(config)
+            config
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Constants.DEFAULT_FILENAME_SPLIT_PATTERN
+        }
+    }
+
+
     fun getGeneratedFile(project: Project): VirtualFile {
         return getGeneratedFilePath(project).let {
             val configName = readSetting(project, Constants.KEY_OUTPUT_FILENAME)
@@ -163,12 +181,17 @@ object FileHelper {
     @Suppress("DuplicatedCode")
     @JvmStatic
     fun getPubSpecConfig(project: Project): PubSpecConfig? {
-        PubRoot.forFile(getProjectIdeaFile(project))?.let { pubRoot ->
-            FileInputStream(pubRoot.pubspec.path).use { inputStream ->
-                (Yaml().load(inputStream) as? Map<String, Any>)?.let { map ->
-                    return PubSpecConfig(project, pubRoot, map)
+        try {
+            PubRoot.forFile(getProjectIdeaFile(project))?.let { pubRoot ->
+                FileInputStream(pubRoot.pubspec.path).use { inputStream ->
+                    (Yaml().load(inputStream) as? Map<String, Any>)?.let { map ->
+                        return PubSpecConfig(project, pubRoot, map)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
         }
         return null
     }
