@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id "org.jetbrains.intellij" version "1.1.6"
-    id 'org.jetbrains.kotlin.jvm' version '1.5.30'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.20'
 }
 
 String properties(String key) {
@@ -34,8 +34,8 @@ intellij {
     pluginName = properties("pluginName")
 
     version = properties("platformVersion")
-//    type = properties("platformType")
-//    downloadSources = properties("platformDownloadSources").toBoolean()
+    type = properties("platformType")
+    downloadSources = properties("platformDownloadSources").toBoolean()
     updateSinceUntilBuild = true
 
     // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
@@ -44,6 +44,9 @@ intellij {
 }
 
 runIde {
+    // Absolute path to installed target 3.5 Android Studio to use as
+    // IDE Development Instance (the "Contents" directory is macOS specific):
+    ideDir.set(file("/Applications/Android Studio.app/Contents"))
 }
 
 patchPluginXml {
@@ -53,6 +56,6 @@ patchPluginXml {
     changeNotes = properties("changeNotes")
 }
 
-//runPluginVerifier {
-//    ideVersions = properties("pluginVerifierIdeVersions").split(',').toList()
-//}
+runPluginVerifier {
+    ideVersions = properties("pluginVerifierIdeVersions").split(',').toList()
+}
