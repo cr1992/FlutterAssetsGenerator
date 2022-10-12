@@ -2,9 +2,11 @@
 
 # FlutterAssetsGenerator Changelog
 
-## [2.1.1]
+## [2.2.0]
 ### Fixed
-- Svg preview not displaying
+- Svg preview not displaying.
+### Added
+- Multi module flutter project support.
 ## [2.1.0]
 ### Fixed
 - Bug fix
