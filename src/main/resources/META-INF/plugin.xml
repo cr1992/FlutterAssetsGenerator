@@ -70,6 +70,12 @@
     <depends>org.jetbrains.kotlin</depends>
     <depends>io.flutter</depends>
 
+    <extensions defaultExtensionNs="com.intellij">
+        <!--        行标记-->
+        <codeInsight.lineMarkerProvider language="Dart"
+                                        implementationClass="com.crzsc.plugin.provider.AssetsLineMarkerProvider"/>
+    </extensions>
+
     <applicationListeners>
         <listener class="com.crzsc.plugin.listener.MyProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
