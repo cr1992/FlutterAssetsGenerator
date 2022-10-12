@@ -18,19 +18,28 @@ import kotlin.collections.ArrayList
  * 基于Module来处理Assets
  */
 object FileHelperNew {
+
+    /**
+     * 获取所有可用的Flutter Module的Asset配置
+     */
     @JvmStatic
-    fun getAssets(project: Project): MutableMap<Module, ModulePubSpecConfig> {
+    fun getAssets(project: Project): List<ModulePubSpecConfig> {
         val modules = project.allModules()
-        val folders = mutableMapOf<Module, ModulePubSpecConfig>()
+        val folders = mutableListOf<ModulePubSpecConfig>()
         for (module in modules) {
             val moduleDir = module.guessModuleDir()
             if (moduleDir != null) {
                 getPubSpecConfig(module)?.let {
-                    folders[module] = it
+                    folders.add(it)
                 }
             }
         }
         return folders
+    }
+
+    @JvmStatic
+    fun shouldActivateFor(project: Project): Boolean {
+        return FlutterModuleUtils.hasFlutterModule(project)
     }
 
     @Suppress("DuplicatedCode")

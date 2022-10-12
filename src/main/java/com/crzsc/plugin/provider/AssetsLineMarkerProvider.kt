@@ -1,6 +1,6 @@
 package com.crzsc.plugin.provider
 
-import com.crzsc.plugin.utils.FileHelper
+import com.crzsc.plugin.utils.FileHelperNew
 import com.crzsc.plugin.utils.PluginUtils.openFile
 import com.crzsc.plugin.utils.isImageExtension
 import com.crzsc.plugin.utils.isSvgExtension
@@ -16,6 +16,8 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.scale.ScaleContext
 import com.intellij.util.IconUtil
 import com.intellij.util.SVGLoader
+import io.flutter.utils.FlutterModuleUtils
+import org.jetbrains.kotlin.idea.util.module
 import javax.swing.Icon
 import javax.swing.ImageIcon
 
@@ -25,22 +27,30 @@ import javax.swing.ImageIcon
  */
 class AssetsLineMarkerProvider : LineMarkerProvider {
 
-    /**
-     * Fixme 大图性能优化，添加缓存策略
-     */
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        val filenameCorrect = element.containingFile.name.equals(
-            FileHelper.getGeneratedFile(
-                element.project
-            ).name, true
-        ) || element.containingFile.name.equals(
-            "assets.dart", true
-        )
+        val module = element.module
+        if (!FlutterModuleUtils.isFlutterModule(module)) return null
         val elementType = (element as? LeafPsiElement?)?.elementType?.toString()
-        if (filenameCorrect
-            && elementType == "REGULAR_STRING_PART"
+        if (elementType == "REGULAR_STRING_PART"
         ) {
-            return showMakeByType(element)
+            // 这里会被多次调用 尽量减少调用次数
+            var assetName: String? = null
+            if (module != null) {
+                FileHelperNew.getPubSpecConfig(module)?.let {
+                    assetName = FileHelperNew.getGeneratedFile(
+                        it
+                    ).name
+                }
+            }
+            val filenameCorrect = element.containingFile.name.equals(
+                assetName, true
+            ) || element.containingFile.name.equals(
+                "assets.dart", true
+            )
+            if (filenameCorrect) {
+//                println("filenameCorrect showMakeByType : $element")
+                return showMakeByType(element)
+            }
         }
         return null
     }
