@@ -10,7 +10,7 @@ Drag it to your IDE to install.
 
 1.  define your assets dir in `pubspec.yaml`.
 
-2.  - Build -> Generate Assets class
+2.  Build -> Generate Assets class
 - Alt/Opt + G
 
 It will generate assets.dart on lib/generated.
