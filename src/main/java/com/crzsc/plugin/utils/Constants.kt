@@ -36,6 +36,11 @@ object Constants {
     const val FILENAME_SPLIT_PATTERN = "filename_split_pattern"
 
     /**
+     * 忽略的目录
+     */
+    const val PATH_IGNORE = "path_ignore"
+
+    /**
      * 默认目录
      */
     const val DEFAULT_OUTPUT_DIR = "generated"

@@ -131,6 +131,21 @@ object FileHelperNew {
     }
 
     /**
+     * 读取忽略文件目录
+     */
+    fun getPathIgnore(config: ModulePubSpecConfig): List<String> {
+        return try {
+            val paths =
+                readSetting(config, Constants.PATH_IGNORE) as List<String>?
+                    ?: emptyList()
+            paths
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
      * 获取generated自动生成目录
      * 从yaml中读取
      */
@@ -161,7 +176,10 @@ object FileHelperNew {
     fun getGeneratedFile(config: ModulePubSpecConfig): VirtualFile {
         return getGeneratedFilePath(config).let {
             val configName = readSetting(config, Constants.KEY_OUTPUT_FILENAME)
-            return@let it.findOrCreateChildData(it, "${configName ?: Constants.DEFAULT_CLASS_NAME.lowercase(Locale.getDefault())}.dart")
+            return@let it.findOrCreateChildData(
+                it,
+                "${configName ?: Constants.DEFAULT_CLASS_NAME.lowercase(Locale.getDefault())}.dart"
+            )
         }
     }
 

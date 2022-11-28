@@ -41,12 +41,14 @@ class FileGenerator(private val project: Project) {
 
     private fun generateWithConfig(config: ModulePubSpecConfig) {
         val module = config.module
-        println("module $module config ${config.assetVFile}")
         val map = mutableMapOf<String, String>()
+        val ignorePath = FileHelperNew.getPathIgnore(config)
+        println("module $module config ${config.assetVFile} ignorePath $ignorePath")
         generateFileMap(
             config.assetVFile,
             config,
             map,
+            ignorePath,
         )
         if (map.isEmpty()) {
             showNotify("assets path is empty")
@@ -81,16 +83,27 @@ class FileGenerator(private val project: Project) {
         root: VirtualFile,
         config: ModulePubSpecConfig,
         map: MutableMap<String, String>,
+        ignorePath: List<String>,
     ) {
         val namedWithParent = FileHelperNew.isNamedWithParent(config)
         val pattern = FileHelperNew.getFilenameSplitPattern(config)
         val basePath = config.module.guessModuleDir()?.path
         val regex = Regex(pattern)
         root.children.filter {
-            !it.name.startsWith('.') && checkName(it.name)
+            var pathIgnore = false
+            if (ignorePath.isNotEmpty()) {
+                for (name in ignorePath) {
+                    if (it.path.contains(name, ignoreCase = true)) {
+                        pathIgnore = true
+                        println("${it.path} pathIgnore : $pathIgnore")
+                        break
+                    }
+                }
+            }
+            !it.name.startsWith('.') && checkName(it.name) && !pathIgnore
         }.forEach {
             if (it.isDirectory) {
-                generateFileMap(it, config, map)
+                generateFileMap(it, config, map, ignorePath)
             } else {
                 var key = it.nameWithoutExtension.toLowCamelCase(regex)///fileName style
                 val value = it.path.removePrefix("$basePath/")
