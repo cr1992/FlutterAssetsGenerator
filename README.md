@@ -48,6 +48,6 @@ flutter_assets_generator:
   class_name: Assets
   # Optional. Sets the filename split pattern for filename split. Default: [-_]
   filename_split_pattern: "[-_]"
-  # Optional. Configuring ignore paths. Default: [],e.g: ["assets/fonts"]
+  # Optional. Configuring ignore paths. Default: [],e.g: ["assets/fonts", "assets/images/dark", ...]
   path_ignore: []
 ```
