@@ -2,7 +2,6 @@ package com.crzsc.plugin.provider
 
 import com.crzsc.plugin.utils.FileHelperNew
 import com.crzsc.plugin.utils.PluginUtils.openFile
-import com.crzsc.plugin.utils.isImageExtension
 import com.crzsc.plugin.utils.isSvgExtension
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
@@ -74,8 +73,7 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         if (vFile != null) {
             return when {
                 assetsPath.isSvgExtension -> showSvgMark(element, anchor, vFile)
-                assetsPath.isImageExtension -> showImageMark(element, anchor, vFile)
-                else -> null
+                else -> showIconMark(element, anchor, vFile)
             }
         }
         return null
@@ -104,7 +102,7 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
     }
 
 
-    private fun showImageMark(
+    private fun showIconMark(
         element: PsiElement, anchor: PsiElement,
         vFile: VirtualFile
     ): LineMarkerInfo<*> {
