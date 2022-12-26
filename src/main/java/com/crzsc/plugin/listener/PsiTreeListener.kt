@@ -63,10 +63,13 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
                 event.child?.let { changedFile ->
                     changedFile.parent.castSafelyTo<PsiDirectory>()?.let { dir ->
                         //assets目录发生改变 这里延迟生成避免报错
-                        if (dir.virtualFile.path.startsWith(config.assetVFile.path)) {
-                            Timer().schedule(timerTask {
-                                fileGenerator.generateOne(config)
-                            }, 300)
+                        for (file in config.assetVFiles) {
+                            if (dir.virtualFile.path.startsWith(file.path)) {
+                                Timer().schedule(timerTask {
+                                    fileGenerator.generateOne(config)
+                                }, 300)
+                                break
+                            }
                         }
                     }
                 }

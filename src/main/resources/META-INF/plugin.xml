@@ -90,5 +90,10 @@
             <add-to-group group-id="BuildMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="alt g"/>
         </action>
+        <action id="com.crzsc.plugin.actions.GenerateDirAction" class="com.crzsc.plugin.actions.GenerateDirAction"
+                text="Flutter: Configuring Paths" description="Configuring Paths in pubspec.yaml"
+                icon="AllIcons.Actions.BuildLoadChanges">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="WeighingNewGroup"/>
+        </action>
     </actions>
 </idea-plugin>

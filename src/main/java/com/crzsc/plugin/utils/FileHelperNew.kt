@@ -27,10 +27,12 @@ object FileHelperNew {
         val modules = project.allModules()
         val folders = mutableListOf<ModulePubSpecConfig>()
         for (module in modules) {
-            val moduleDir = module.guessModuleDir()
-            if (moduleDir != null) {
-                getPubSpecConfig(module)?.let {
-                    folders.add(it)
+            if (FlutterModuleUtils.isFlutterModule(module)) {
+                val moduleDir = module.guessModuleDir()
+                if (moduleDir != null) {
+                    getPubSpecConfig(module)?.let {
+                        folders.add(it)
+                    }
                 }
             }
         }
@@ -42,7 +44,13 @@ object FileHelperNew {
         return FlutterModuleUtils.hasFlutterModule(project)
     }
 
-    @Suppress("DuplicatedCode")
+    fun tryGetAssetsList(map: Map<*, *>) : MutableList<*>? {
+        (map["flutter"] as? Map<*, *>)?.let {
+            return it["assets"] as? MutableList<*>
+        }
+        return null
+    }
+
     @JvmStatic
     fun getPubSpecConfig(module: Module): ModulePubSpecConfig? {
         try {
@@ -52,28 +60,38 @@ object FileHelperNew {
                 val fis = FileInputStream(pubRoot.pubspec.path)
                 val pubConfigMap = Yaml().load(fis) as? Map<String, Any>
                 if (pubConfigMap != null) {
-                    var assetsPath: String? = null
+                    val assetVFiles = mutableListOf<VirtualFile>()
                     (pubConfigMap["flutter"] as? Map<*, *>)?.let { configureMap ->
                         (configureMap["assets"] as? ArrayList<*>)?.let { list ->
-                            val path = list[0] as String
-                            val index = path.indexOf("/")
-                            assetsPath = if (index == -1) {
-                                path
-                            } else {
-                                path.substring(0, index)
+                            for (path in list) {
+                                moduleDir.findFileByRelativePath(path as String)?.let {
+                                    if (it.isDirectory) {
+                                        val index = path.indexOf("/")
+                                        val assetsPath = if (index == -1) {
+                                            path
+                                        } else {
+                                            path.substring(0, index)
+                                        }
+                                        val assetVFile = moduleDir.findChild(assetsPath)
+                                            ?: moduleDir.createChildDirectory(this, assetsPath)
+                                        if (!assetVFiles.contains(assetVFile)) {
+                                            assetVFiles.add(assetVFile)
+                                        }
+                                    } else {
+                                        if (!assetVFiles.contains(it)) {
+                                            assetVFiles.add(it)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                    if (assetsPath != null) {
-                        val assetVFile = moduleDir.findChild(assetsPath!!)
-                            ?: moduleDir.createChildDirectory(this, assetsPath!!)
-                        return ModulePubSpecConfig(
-                            module,
-                            pubRoot,
-                            assetVFile,
-                            pubConfigMap,
-                        )
-                    }
+                    return ModulePubSpecConfig(
+                        module,
+                        pubRoot,
+                        assetVFiles,
+                        pubConfigMap,
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -191,7 +209,7 @@ object FileHelperNew {
 data class ModulePubSpecConfig(
     val module: Module,
     val pubRoot: PubRoot,
-    val assetVFile: VirtualFile,
+    val assetVFiles: List<VirtualFile>,
     val map: Map<String, Any>,
     val isFlutterModule: Boolean = FlutterModuleUtils.isFlutterModule(module)
 )
