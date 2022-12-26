@@ -1,21 +1,20 @@
-# FlutterAssetsGenerator
-
 It's a plugin that generates an asset index which we can easily find.It can be used on Android Studio or Idea.
-
-## Installing
-
-Drag it to your IDE to install.
 
 ## How to use
 
-1.  define your assets dir in `pubspec.yaml`.
+### 1.Configuring paths in pubspec.yaml
 
-2.  Build -> Generate Assets class
-- Alt/Opt + G
+Plugin now supports automatic configuration:
+- Right-click on folder or file, then click
+  <br>`Flutter: Configuration complete`.
+<br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9nxz6ttg30ed0ootl5.gif)
+### 2.Generate file
 
-It will generate assets.dart on lib/generated.
+You can generate file by these ways:
 
-![image-20201121183150581](https://i.loli.net/2020/11/21/ruD9M8dv27zsbUK.png)
+- `Build` => `Generate Flutter Assets`
+<br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9rnd51mg30hv0orjz6.gif)
+- Press `Option`(mac)/`Alt`(win) + `G`,It will generate assets.dart on lib/generated.
 
 Simply use it like:
 
@@ -28,10 +27,17 @@ Image.asset(
         )
 ```
 
-Plugin will observe your changes on assets path and update file.
+### 3.Extras
+
+- You can locate file quickly by click line-marker.
+  <br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9vyjccyg30hv0ordpz.gif)
+- Plugin will observe your changes on assets path and update file.
+  <br><img style="max-width:100%;overflow:hidden;" src="https://tva1.sinaimg.cn/large/008vxvgGly1h9h6yqqx09g312l0q4k4n.gif" alt="">
 
 ## Settings
-
+### Global
+`Preferences` => `Tools` => `FlutterAssetsGenerator`
+### Module based
 You can change default settings by add following contents in your `pubspec.yaml`.
 
 ```yaml

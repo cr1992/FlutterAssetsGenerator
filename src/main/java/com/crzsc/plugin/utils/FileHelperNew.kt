@@ -1,5 +1,6 @@
 package com.crzsc.plugin.utils
 
+import com.crzsc.plugin.setting.PluginSetting
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir
@@ -12,7 +13,6 @@ import org.yaml.snakeyaml.Yaml
 import java.io.FileInputStream
 import java.util.*
 import java.util.regex.Pattern
-import kotlin.collections.ArrayList
 
 /**
  * 基于Module来处理Assets
@@ -44,7 +44,7 @@ object FileHelperNew {
         return FlutterModuleUtils.hasFlutterModule(project)
     }
 
-    fun tryGetAssetsList(map: Map<*, *>) : MutableList<*>? {
+    fun tryGetAssetsList(map: Map<*, *>): MutableList<*>? {
         (map["flutter"] as? Map<*, *>)?.let {
             return it["assets"] as? MutableList<*>
         }
@@ -115,21 +115,23 @@ object FileHelperNew {
      * 是否开启了自动检测
      */
     fun isAutoDetectionEnable(config: ModulePubSpecConfig): Boolean {
-        return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean? ?: true
+        return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean? ?: PluginSetting.instance.autoDetection
     }
 
     /**
      * 是否根据父文件夹命名 默认true
      */
     fun isNamedWithParent(config: ModulePubSpecConfig): Boolean {
-        return readSetting(config, Constants.KEY_NAMED_WITH_PARENT) as Boolean? ?: true
+        return readSetting(config, Constants.KEY_NAMED_WITH_PARENT) as Boolean?
+            ?: PluginSetting.instance.namedWithParent
     }
 
     /**
      * 读取生成的类名配置
      */
     fun getGeneratedClassName(config: ModulePubSpecConfig): String {
-        return readSetting(config, Constants.KEY_CLASS_NAME) as String? ?: Constants.DEFAULT_CLASS_NAME
+        return readSetting(config, Constants.KEY_CLASS_NAME) as String? ?: PluginSetting.instance.className
+        ?: Constants.DEFAULT_CLASS_NAME
     }
 
     /**
@@ -139,7 +141,7 @@ object FileHelperNew {
         return try {
             val pattern =
                 readSetting(config, Constants.FILENAME_SPLIT_PATTERN) as String?
-                    ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
+                    ?: PluginSetting.instance.filenameSplitPattern ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
             Pattern.compile(pattern)
             pattern
         } catch (e: Exception) {
@@ -193,10 +195,10 @@ object FileHelperNew {
 
     fun getGeneratedFile(config: ModulePubSpecConfig): VirtualFile {
         return getGeneratedFilePath(config).let {
-            val configName = readSetting(config, Constants.KEY_OUTPUT_FILENAME)
+            val configName = readSetting(config, Constants.KEY_OUTPUT_FILENAME) ?: PluginSetting.instance.fileName
             return@let it.findOrCreateChildData(
                 it,
-                "${configName ?: Constants.DEFAULT_CLASS_NAME.lowercase(Locale.getDefault())}.dart"
+                "${configName ?: Constants.DEFAULT_CLASS_NAME.lowercase()}.dart"
             )
         }
     }

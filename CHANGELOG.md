@@ -1,7 +1,10 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 # FlutterAssetsGenerator Changelog
-
+## [2.4.0]
+### Added
+- Global configuration.
+- Register assets to pubspec with one click.
 ## [2.3.0]
 ### Added
 - Configuring ignore paths.
