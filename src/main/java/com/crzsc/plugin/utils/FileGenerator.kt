@@ -228,7 +228,7 @@ class FileGenerator(private val project: Project) {
 
     private fun traversalDir(file: VirtualFile, rootPath: String, list: MutableList<String>) {
         if (file.isDirectory) {
-            list.add(file.path.removePrefix(rootPath))
+            list.add("${file.path.removePrefix(rootPath)}/")
             file.children.forEach {
                 if (it.isDirectory) {
                     traversalDir(it, rootPath, list)
