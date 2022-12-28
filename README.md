@@ -6,7 +6,7 @@ It's a plugin that generates an asset index which we can easily find.It can be u
 
 Plugin now supports automatic configuration:
 - Right-click on folder or file, then click
-  <br>`Flutter: Configuration complete`.
+  <br>`Flutter: Configuring Paths`.
 <br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9nxz6ttg30ed0ootl5.gif)
 ### 2.Generate file
 
