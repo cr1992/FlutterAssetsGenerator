@@ -2,7 +2,7 @@ package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.utils.PluginUtils.showNotify
 import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
-import com.crzsc.plugin.utils.PluginUtils.toUpperCaseFirst
+import com.crzsc.plugin.utils.PluginUtils.upperCaseFirst
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
@@ -140,9 +140,9 @@ class FileGenerator(private val project: Project) {
         val value = it.path.removePrefix("$basePath/")
         if (namedWithParent) {
             it.parent?.let { parent ->
-                key = "${parent.name.toLowCamelCase(regex)}${key.toUpperCaseFirst()}"
+                key = "${parent.name.toLowCamelCase(regex)}${key.upperCaseFirst()}"
                 if (map.containsKey(key)) {
-                    key = "${parent.parent.name.toLowCamelCase(regex)}${key.toUpperCaseFirst()}"
+                    key = "${parent.parent.name.toLowCamelCase(regex)}${key.upperCaseFirst()}"
                 }
                 map[key] = value
             }

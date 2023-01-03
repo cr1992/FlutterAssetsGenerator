@@ -42,9 +42,9 @@ object PluginUtils {
             val sb = StringBuilder()
             for (i in split.indices) {
                 if (i == 0) {
-                    sb.append(split[i])
+                    sb.append(split[i].lowerCaseFirst())
                 } else {
-                    sb.append(split[i].toUpperCaseFirst())
+                    sb.append(split[i].upperCaseFirst())
                 }
             }
             return sb.toString()
@@ -59,14 +59,22 @@ object PluginUtils {
             .openTextEditor(OpenFileDescriptor(project, vFile), true)
     }
 
-    /**
-     * 首字母大写
-     */
-    fun String.toUpperCaseFirst(): String {
+    fun String.lowerCaseFirst(): String {
         return if (this.isEmpty()) {
             this
         } else {
-            "${this[0].toUpperCase()}${this.subSequence(1, this.length)}"
+            "${this[0].lowercase()}${this.subSequence(1, this.length)}"
+        }
+    }
+
+    /**
+     * 首字母大写
+     */
+    fun String.upperCaseFirst(): String {
+        return if (this.isEmpty()) {
+            this
+        } else {
+            "${this[0].uppercase()}${this.subSequence(1, this.length)}"
         }
     }
 }
