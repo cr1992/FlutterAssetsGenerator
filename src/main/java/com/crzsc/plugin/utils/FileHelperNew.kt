@@ -173,7 +173,8 @@ object FileHelperNew {
         return config.pubRoot.lib?.let { lib ->
             // 没有配置则返回默认path
             val filePath: String = readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
-                ?: return@let lib.findOrCreateChildDir(lib, Constants.DEFAULT_OUTPUT_DIR)
+                ?: PluginSetting.instance.filePath ?: Constants.DEFAULT_OUTPUT_DIR
+            println("getGeneratedFilePath $filePath")
             if (!filePath.contains(File.separator)) {
                 return@let lib.findOrCreateChildDir(lib, filePath)
             } else {
