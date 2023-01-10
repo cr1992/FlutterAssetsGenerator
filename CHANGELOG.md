@@ -1,9 +1,9 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
-# FlutterAssetsGenerator Changelog
+[//]: # (# FlutterAssetsGenerator Changelog)
 ## [2.4.1]
 ### Fixed
-- Bugs.
+- Bug fix.
 ## [2.4.0]
 ### Added
 - Global configuration.

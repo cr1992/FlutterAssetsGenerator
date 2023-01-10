@@ -72,10 +72,9 @@ patchPluginXml {
     version = properties("pluginVersion")
     sinceBuild = properties("pluginSinceBuild")
     untilBuild = properties("pluginUntilBuild")
-    def readme = new File(rootDir, "README.md")
-    pluginDescription = ExtensionsKt.markdownToHTML(readme.text)
+    pluginDescription = ExtensionsKt.markdownToHTML(new File(rootDir, "README.md").text)
     // Get the latest available change notes from the changelog file
-    changeNotes = changelog.getLatest().toHTML()
+    changeNotes = ExtensionsKt.markdownToHTML(new File(rootDir, "CHANGELOG.md").text)
 }
 
 runPluginVerifier {
