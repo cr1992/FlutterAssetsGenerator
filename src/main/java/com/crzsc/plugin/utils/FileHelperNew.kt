@@ -193,15 +193,22 @@ object FileHelperNew {
         return child ?: createChildDirectory(requestor, name)
     }
 
+    /**
+     * 获取需要生成的文件 如果没有则会创建文件
+     */
     fun getGeneratedFile(config: ModulePubSpecConfig): VirtualFile {
         return getGeneratedFilePath(config).let {
-            val configName = readSetting(config, Constants.KEY_OUTPUT_FILENAME) ?: PluginSetting.instance.fileName
+            val configName = getGeneratedFileName(config)
             return@let it.findOrCreateChildData(
                 it,
-                "${configName ?: Constants.DEFAULT_CLASS_NAME.lowercase()}.dart"
+                "$configName.dart"
             )
         }
     }
+
+    fun getGeneratedFileName(config: ModulePubSpecConfig): String =
+        readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String ?: PluginSetting.instance.fileName
+        ?: Constants.DEFAULT_CLASS_NAME.lowercase()
 
 }
 

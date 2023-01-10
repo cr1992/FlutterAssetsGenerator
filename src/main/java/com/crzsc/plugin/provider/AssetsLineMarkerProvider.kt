@@ -36,9 +36,7 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
             var assetName: String? = null
             if (module != null) {
                 FileHelperNew.getPubSpecConfig(module)?.let {
-                    assetName = FileHelperNew.getGeneratedFile(
-                        it
-                    ).name
+                    assetName = FileHelperNew.getGeneratedFileName(it)
                 }
             }
             val filenameCorrect = element.containingFile.name.equals(

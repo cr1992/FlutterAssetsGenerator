@@ -67,23 +67,7 @@ class FileGenerator(private val project: Project) {
         }
         if (map.isEmpty()) {
 //            showNotify("assets path is empty")
-            // 如果意外走进来了 尝试删除
-            try {
-                val file = FileHelperNew.getGeneratedFile(config)
-                if (file.exists()) {
-                    file.delete(this)
-                }
-                file.parent?.let {
-                    if (it.exists() && it.children.isEmpty()) {
-                        it.delete(this)
-                    }
-                }
-            } catch (
-                e: Exception
-            ) {
-                e.printStackTrace()
-            }
-            println("${config.module} assets map is empty, delete existing file.")
+            println("${config.module} assets map is empty, skip")
             return
         }
         val content = StringBuilder()
