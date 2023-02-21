@@ -17,6 +17,7 @@ import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLMapping
 import org.jetbrains.yaml.psi.YAMLSequence
+import java.io.File
 
 class FileGenerator(private val project: Project) {
     private val ignoreDir = listOf("2.0x", "3.0x", "Mx", "Nx")
@@ -178,6 +179,9 @@ class FileGenerator(private val project: Project) {
 //            println(paths)
             val moduleAssets = FileHelperNew.tryGetAssetsList(module.map)
             if (moduleAssets != null) {
+                moduleAssets.removeIf {
+                    !File(it as String).exists()
+                }
                 paths.removeIf {
                     moduleAssets.contains(it)
                 }
