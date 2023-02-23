@@ -13,6 +13,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import io.flutter.utils.FlutterModuleUtils
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
+import org.jetbrains.kotlin.idea.util.findModule
 import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLMapping
@@ -179,42 +180,53 @@ class FileGenerator(private val project: Project) {
 //            println(paths)
             val moduleAssets = FileHelperNew.tryGetAssetsList(module.map)
             if (moduleAssets != null) {
+                val moduleDir = file.findModule(project)?.guessModuleDir()
+                println(moduleDir?.path)
                 moduleAssets.removeIf {
-                    !File(it as String).exists()
+                    var parentPath = moduleDir?.path
+                    var path = it as String
+                    path = path.removeSuffix(File.separator)
+                    if (path.contains(File.separator)) {
+                        val subIndex = path.lastIndexOf(File.separator)
+                        parentPath = "$parentPath${File.separator}${path.substring(0, subIndex + 1)}"
+                        path = path.substring(subIndex + 1, path.length)
+//                        println("parentPath：$parentPath path：$path")
+                    }
+                    val asset = File(parentPath, path)
+                    println("${asset.absolutePath} file exists : ${asset.exists()}")
+                    !asset.exists()
                 }
                 paths.removeIf {
                     moduleAssets.contains(it)
                 }
             }
-            if (paths.isNotEmpty()) {
-                val yamlFile = module.pubRoot.pubspec.toPsiFile(project) as? YAMLFile
-                yamlFile?.let {
-                    val psiElement =
-                        yamlFile.node.getChildren(null)
-                            .firstOrNull()?.psi?.children?.firstOrNull()?.children?.firstOrNull { it.text.startsWith("flutter:") }
-                    if (psiElement != null) {
-                        val yamlMapping = psiElement.children.first() as YAMLMapping
-                        WriteCommandAction.runWriteCommandAction(project) {
-                            var assetsValue = yamlMapping.keyValues.firstOrNull { it.keyText == "assets" }
-                            val stringBuilder = StringBuilder()
-                            moduleAssets?.forEach {
-                                stringBuilder.append("    - $it\n")
-                            }
-                            paths.forEach {
-                                stringBuilder.append("    - $it\n")
-                            }
-                            stringBuilder.removeSuffix("\n")
-                            if (assetsValue == null) {
-                                assetsValue = YAMLElementGenerator.getInstance(project)
-                                    .createYamlKeyValue("assets", stringBuilder.toString())
-                                yamlMapping.putKeyValue(assetsValue)
-                            } else {
-                                val yamlValue = PsiTreeUtil.collectElementsOfType(
-                                    YAMLElementGenerator.getInstance(project)
-                                        .createDummyYamlWithText(stringBuilder.toString()), YAMLSequence::class.java
-                                ).iterator().next()
-                                assetsValue.setValue(yamlValue)
-                            }
+            val yamlFile = module.pubRoot.pubspec.toPsiFile(project) as? YAMLFile
+            yamlFile?.let {
+                val psiElement =
+                    yamlFile.node.getChildren(null)
+                        .firstOrNull()?.psi?.children?.firstOrNull()?.children?.firstOrNull { it.text.startsWith("flutter:") }
+                if (psiElement != null) {
+                    val yamlMapping = psiElement.children.first() as YAMLMapping
+                    WriteCommandAction.runWriteCommandAction(project) {
+                        var assetsValue = yamlMapping.keyValues.firstOrNull { it.keyText == "assets" }
+                        val stringBuilder = StringBuilder()
+                        moduleAssets?.forEach {
+                            stringBuilder.append("    - $it\n")
+                        }
+                        paths.forEach {
+                            stringBuilder.append("    - $it\n")
+                        }
+                        stringBuilder.removeSuffix("\n")
+                        if (assetsValue == null) {
+                            assetsValue = YAMLElementGenerator.getInstance(project)
+                                .createYamlKeyValue("assets", stringBuilder.toString())
+                            yamlMapping.putKeyValue(assetsValue)
+                        } else {
+                            val yamlValue = PsiTreeUtil.collectElementsOfType(
+                                YAMLElementGenerator.getInstance(project)
+                                    .createDummyYamlWithText(stringBuilder.toString()), YAMLSequence::class.java
+                            ).iterator().next()
+                            assetsValue.setValue(yamlValue)
                         }
                     }
                 }
