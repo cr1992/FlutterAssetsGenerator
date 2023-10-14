@@ -54,6 +54,7 @@ class FileGenerator(private val project: Project) {
     }
 
     private fun generateWithConfig(config: ModulePubSpecConfig) {
+        println(config)
         val module = config.module
         val map = mutableMapOf<String, String>()
         val ignorePath = FileHelperNew.getPathIgnore(config)
@@ -139,7 +140,7 @@ class FileGenerator(private val project: Project) {
         namedWithParent: Boolean,
         map: MutableMap<String, String>
     ) {
-        var key = it.nameWithoutExtension.toLowCamelCase(regex)///fileName style
+        var key = it.nameWithoutExtension.replace(".", "_").toLowCamelCase(regex)///fileName style
         val value = it.path.removePrefix("$basePath/")
         if (namedWithParent) {
             it.parent?.let { parent ->

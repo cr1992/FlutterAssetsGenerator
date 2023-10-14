@@ -1,5 +1,6 @@
 package com.crzsc.plugin.setting
 
+import com.crzsc.plugin.utils.message
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -13,15 +14,15 @@ class AppSettingsComponent {
     private val fileName = JBTextField()
     private val className = JBTextField()
     private val filenameSplitPattern = JBTextField()
-    private val autoDetection = JBCheckBox("Enable auto-detection")
-    private val namedWithParent = JBCheckBox("Named with parent")
+    private val autoDetection = JBCheckBox(message("settingsAutoDetection"))
+    private val namedWithParent = JBCheckBox(message("settingsNamed"))
 
     init {
         panel = FormBuilder.createFormBuilder()
-            .addLabeledComponent(JBLabel("Enter generated file path: "), filePath, 1, false)
-            .addLabeledComponent(JBLabel("Enter generated file name: "), fileName, 1, false)
-            .addLabeledComponent(JBLabel("Enter generated class name: "), className, 1, false)
-            .addLabeledComponent(JBLabel("Enter filename split pattern: "), filenameSplitPattern, 1, false)
+            .addLabeledComponent(JBLabel(message("settingsFilePath")), filePath, 1, false)
+            .addLabeledComponent(JBLabel(message("settingsFileName")), fileName, 1, false)
+            .addLabeledComponent(JBLabel(message("settingsClassName")), className, 1, false)
+            .addLabeledComponent(JBLabel(message("settingsSplitPattern")), filenameSplitPattern, 1, false)
             .addComponent(autoDetection, 1)
             .addComponent(namedWithParent, 1)
             .addComponentFillVertically(JPanel(), 0)
