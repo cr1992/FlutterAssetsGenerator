@@ -3,6 +3,7 @@ package com.crzsc.plugin.actions
 import com.crzsc.plugin.utils.FileGenerator
 import com.crzsc.plugin.utils.FileHelperNew
 import com.crzsc.plugin.utils.PluginUtils.showNotify
+import com.crzsc.plugin.utils.message
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
@@ -20,7 +21,7 @@ class GenerateDirAction : AnAction() {
                 FileGenerator(project).buildYaml(file)
             }
         } else {
-            showNotify("This project is not the flutter project")
+            showNotify(message("notFlutterProject"))
         }
     }
 }
