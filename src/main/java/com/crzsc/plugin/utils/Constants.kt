@@ -25,6 +25,8 @@ object Constants {
      */
     const val KEY_NAMED_WITH_PARENT = "named_with_parent"
 
+    const val KEY_LEADING_WITH_PACKAGE_NAME = "leading_with_package_name"
+
     /**
      * 输出的文件名
      */

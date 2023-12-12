@@ -31,7 +31,6 @@ repositories {
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }
 
@@ -61,6 +60,8 @@ changelog {
     groups = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
 }
 
+
+buildPlugin {}
 
 runIde {
     // Absolute path to installed target 3.5 Android Studio to use as

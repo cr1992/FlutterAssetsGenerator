@@ -126,6 +126,11 @@ object FileHelperNew {
             ?: PluginSetting.instance.namedWithParent
     }
 
+    fun isWithLeadingWithPackageName(config: ModulePubSpecConfig): Boolean {
+        return readSetting(config, Constants.KEY_LEADING_WITH_PACKAGE_NAME) as Boolean?
+                ?: PluginSetting.instance.leadingWithPackageName
+    }
+
     /**
      * 读取生成的类名配置
      */
