@@ -227,4 +227,11 @@ data class ModulePubSpecConfig(
     val assetVFiles: List<VirtualFile>,
     val map: Map<String, Any>,
     val isFlutterModule: Boolean = FlutterModuleUtils.isFlutterModule(module)
-)
+) {
+    fun getLeadingWithPackageNameIfChecked(): String {
+        if (FileHelperNew.isWithLeadingWithPackageName(this)) {
+            return  "packages/${map["name"]}/"
+        }
+        return  "";
+    }
+}

@@ -34,9 +34,11 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         ) {
             // 这里会被多次调用 尽量减少调用次数
             var assetName: String? = null
+            var leadingWithPackageName: String? = null;
             if (module != null) {
                 FileHelperNew.getPubSpecConfig(module)?.let {
                     assetName = FileHelperNew.getGeneratedFileName(it)
+                    leadingWithPackageName = it.getLeadingWithPackageNameIfChecked()
                 }
             }
             val filenameCorrect = element.containingFile.name.equals(
@@ -46,17 +48,20 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
             )
             if (filenameCorrect) {
 //                println("filenameCorrect showMakeByType : $element")
-                return showMakeByType(element)
+                return showMakeByType(element, leadingWithPackageName)
             }
         }
         return null
     }
 
-    private fun showMakeByType(element: PsiElement): LineMarkerInfo<*>? {
+    private fun showMakeByType(element: PsiElement, leadingWithPackageName: String?): LineMarkerInfo<*>? {
         val assetsPath = element.text
         val anchor = PsiTreeUtil.getDeepestFirst(element)
         // 先用默认的path找文件
         var filePath = element.project.basePath + "/" + element.text
+        if (!leadingWithPackageName.isNullOrEmpty()) {
+            filePath = filePath.replace(leadingWithPackageName, "")
+        }
         var vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
         if (vFile == null) {
             // 如果没找到，尝试根据当前文件向上查找
@@ -65,6 +70,9 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 file = file.parent
             }
             filePath = file.parent.path + "/" + element.text
+            if (!leadingWithPackageName.isNullOrEmpty()) {
+                filePath = filePath.replace(leadingWithPackageName, "")
+            }
             vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
         }
 //        println("showMakeByType assetsPath $assetsPath")
