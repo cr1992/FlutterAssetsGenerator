@@ -1,6 +1,11 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 [//]: # (# FlutterAssetsGenerator Changelog)
+## [2.5.0]
+### Fixed
+- Bug fix.
+### Added
+- add enable leading with package name option
 ## [2.4.2]
 ### Added
 - `Flutter: Configuring Paths` operation deletes paths that don't exist.
