@@ -29,6 +29,7 @@ class AppSettingsConfigurable : Configurable {
         modified = modified or (mySettingsComponent!!.getFilenameSplitPattern() != settings.filenameSplitPattern)
         modified = modified or (mySettingsComponent!!.getFilePath() != settings.filePath)
         modified = modified or (mySettingsComponent!!.getNamedWithParent() != settings.namedWithParent)
+        modified = modified or (mySettingsComponent!!.getLeadingWithPackageName() != settings.leadingWithPackageName)
         return modified
     }
 
@@ -40,6 +41,7 @@ class AppSettingsConfigurable : Configurable {
         settings.filePath = mySettingsComponent!!.getFilePath()
         settings.filenameSplitPattern = mySettingsComponent!!.getFilenameSplitPattern()
         settings.namedWithParent = mySettingsComponent!!.getNamedWithParent()
+        settings.leadingWithPackageName = mySettingsComponent!!.getLeadingWithPackageName()
     }
 
     override fun reset() {
@@ -50,6 +52,7 @@ class AppSettingsConfigurable : Configurable {
         mySettingsComponent!!.setFilePath(settings.filePath)
         mySettingsComponent!!.setFilenameSplitPattern(settings.filenameSplitPattern)
         mySettingsComponent!!.setNamedWithParent(settings.namedWithParent)
+        mySettingsComponent!!.setLeadingWithPackageName(settings.leadingWithPackageName)
     }
 
     override fun disposeUIResources() {

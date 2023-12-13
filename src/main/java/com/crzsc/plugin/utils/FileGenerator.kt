@@ -78,7 +78,7 @@ class FileGenerator(private val project: Project) {
         val className = FileHelperNew.getGeneratedClassName(config)
         content.append("class $className {\n  $className._();\n\n")
         map.toSortedMap().forEach {
-            content.append("  static const String ${it.key} = '${it.value}';\n")
+            content.append("  static const String ${it.key} = '${config.getLeadingWithPackageNameIfChecked()}${it.value}';\n")
         }
         content.append("\n}\n")
         val psiManager = PsiManager.getInstance(project)

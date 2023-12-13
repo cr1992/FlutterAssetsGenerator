@@ -126,6 +126,11 @@ object FileHelperNew {
             ?: PluginSetting.instance.namedWithParent
     }
 
+    fun isWithLeadingWithPackageName(config: ModulePubSpecConfig): Boolean {
+        return readSetting(config, Constants.KEY_LEADING_WITH_PACKAGE_NAME) as Boolean?
+                ?: PluginSetting.instance.leadingWithPackageName
+    }
+
     /**
      * 读取生成的类名配置
      */
@@ -222,4 +227,11 @@ data class ModulePubSpecConfig(
     val assetVFiles: List<VirtualFile>,
     val map: Map<String, Any>,
     val isFlutterModule: Boolean = FlutterModuleUtils.isFlutterModule(module)
-)
+) {
+    fun getLeadingWithPackageNameIfChecked(): String {
+        if (FileHelperNew.isWithLeadingWithPackageName(this)) {
+            return  "packages/${map["name"]}/"
+        }
+        return  "";
+    }
+}

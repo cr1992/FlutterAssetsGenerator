@@ -16,6 +16,7 @@ class AppSettingsComponent {
     private val filenameSplitPattern = JBTextField()
     private val autoDetection = JBCheckBox(message("settingsAutoDetection"))
     private val namedWithParent = JBCheckBox(message("settingsNamed"))
+    private val leadingWithPackageName = JBCheckBox(message("settingsLeadingWithPackageName"))
 
     init {
         panel = FormBuilder.createFormBuilder()
@@ -25,6 +26,7 @@ class AppSettingsComponent {
             .addLabeledComponent(JBLabel(message("settingsSplitPattern")), filenameSplitPattern, 1, false)
             .addComponent(autoDetection, 1)
             .addComponent(namedWithParent, 1)
+            .addComponent(leadingWithPackageName, 1)
             .addComponentFillVertically(JPanel(), 0)
             .panel
     }
@@ -43,6 +45,7 @@ class AppSettingsComponent {
     fun getFileName(): String {
         return fileName.text
     }
+
 
     fun setFileName(text: String?) {
         fileName.text = text
@@ -78,5 +81,13 @@ class AppSettingsComponent {
 
     fun setNamedWithParent(newStatus: Boolean) {
         namedWithParent.isSelected = newStatus
+    }
+
+    fun getLeadingWithPackageName(): Boolean {
+        return leadingWithPackageName.isSelected
+    }
+
+    fun setLeadingWithPackageName(newStatus: Boolean) {
+        leadingWithPackageName.isSelected = newStatus
     }
 }
