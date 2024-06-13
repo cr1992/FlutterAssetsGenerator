@@ -6,17 +6,17 @@ import com.crzsc.plugin.utils.isSvgExtension
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
-import com.intellij.openapi.util.Iconable
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.scale.ScaleContext
-import com.intellij.util.IconUtil
+import com.intellij.util.ImageLoader
 import com.intellij.util.SVGLoader
 import io.flutter.utils.FlutterModuleUtils
 import org.jetbrains.kotlin.idea.util.module
+import java.awt.Image
 import javax.swing.Icon
 import javax.swing.ImageIcon
 
@@ -112,11 +112,13 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         element: PsiElement, anchor: PsiElement,
         vFile: VirtualFile
     ): LineMarkerInfo<*> {
-        val icon = IconUtil.getIcon(vFile, Iconable.ICON_FLAG_VISIBILITY, element.project)
-        //其他文件展示文件格式
+        val imageIcon =
+            ImageIcon(ImageLoader.loadFromStream(vFile.inputStream).getScaledInstance(16, 16, Image.SCALE_SMOOTH))
+        val icon: Icon = imageIcon
         return LineMarkerInfo(
             anchor, anchor.textRange,
-            icon, {
+            icon,
+            {
                 //悬停，会多次调用
                 return@LineMarkerInfo ""
             }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT
