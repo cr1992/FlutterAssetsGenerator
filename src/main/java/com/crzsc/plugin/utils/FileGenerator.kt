@@ -24,7 +24,7 @@ class FileGenerator(private val project: Project) {
         private val LOG = com.intellij.openapi.diagnostic.Logger.getInstance(FileGenerator::class.java)
     }
     
-    private val ignoreDir = listOf("2.0x", "3.0x", "Mx", "Nx")
+
 
     /**
      * 为所有模块重新生成

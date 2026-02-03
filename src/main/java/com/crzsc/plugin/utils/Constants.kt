@@ -20,10 +20,7 @@ object Constants {
      */
     const val KEY_AUTO_DETECTION = "auto_detection"
 
-    /**
-     * 命名是否根据上级目录决定
-     */
-    const val KEY_NAMED_WITH_PARENT = "named_with_parent"
+
 
     const val KEY_LEADING_WITH_PACKAGE_NAME = "leading_with_package_name"
 

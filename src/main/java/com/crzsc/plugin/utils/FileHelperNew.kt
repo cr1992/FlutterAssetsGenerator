@@ -1,6 +1,6 @@
 package com.crzsc.plugin.utils
 
-import com.crzsc.plugin.setting.PluginSetting
+
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir
@@ -119,20 +119,14 @@ object FileHelperNew {
      */
     fun isAutoDetectionEnable(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean?
-            ?: PluginSetting.instance.autoDetection
+            ?: true
     }
 
-    /**
-     * 是否根据父文件夹命名 默认true
-     */
-    fun isNamedWithParent(config: ModulePubSpecConfig): Boolean {
-        return readSetting(config, Constants.KEY_NAMED_WITH_PARENT) as Boolean?
-            ?: PluginSetting.instance.namedWithParent
-    }
+
 
     fun isWithLeadingWithPackageName(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_LEADING_WITH_PACKAGE_NAME) as Boolean?
-            ?: PluginSetting.instance.leadingWithPackageName
+            ?: false
     }
 
     /**
@@ -140,7 +134,6 @@ object FileHelperNew {
      */
     fun getGeneratedClassName(config: ModulePubSpecConfig): String {
         return readSetting(config, Constants.KEY_CLASS_NAME) as String?
-            ?: PluginSetting.instance.className
             ?: Constants.DEFAULT_CLASS_NAME
     }
 
@@ -151,7 +144,6 @@ object FileHelperNew {
         return try {
             val pattern =
                 readSetting(config, Constants.FILENAME_SPLIT_PATTERN) as String?
-                    ?: PluginSetting.instance.filenameSplitPattern
                     ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
             Pattern.compile(pattern)
             pattern
@@ -184,7 +176,7 @@ object FileHelperNew {
         return config.pubRoot.lib?.let { lib ->
             // 读取配置的输出目录
             val filePath: String = readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
-                ?: PluginSetting.instance.filePath ?: Constants.DEFAULT_OUTPUT_DIR
+                ?: Constants.DEFAULT_OUTPUT_DIR
 
             println("getGeneratedFilePath $filePath")
 
@@ -222,7 +214,6 @@ object FileHelperNew {
 
     fun getGeneratedFileName(config: ModulePubSpecConfig): String =
         readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String
-            ?: PluginSetting.instance.fileName
             ?: Constants.DEFAULT_CLASS_NAME.lowercase()
 
     /**

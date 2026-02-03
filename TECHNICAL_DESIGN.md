@@ -98,42 +98,92 @@ graph LR
     E --> F[Generate Code]
 ```
 
-## 3. 关键类解析 (Key Class Analysis)
+## 3. 核心类与关键代码深度解析 (Deep Dive)
 
-### 3.1 `PubspecDocumentListener.kt`
-**作用**: 监听 `pubspec.yaml` 的保存动作。
-**核心逻辑**:
-- 使用 `FileDocumentManagerListener` 替代传统的 `PsiTreeListener`，精准捕获保存时刻。
-- **关键代码**: 
-    ```kotlin
-    // 优先从 Document 读取内存数据，而不是 File.readText()
-    val document = FileDocumentManager.getInstance().getDocument(file)
-    val content = document?.text ?: ...
-    ```
-- **线程模型**: 使用 `ApplicationManager.getApplication().invokeLater` 将生成任务推迟到保存动作完成后，避免写锁冲突。
+### 3.1 `PubspecDocumentListener` (事件源)
+**类路径**: `src/main/java/com/crzsc/plugin/listener/PubspecDocumentListener.kt`
 
-### 3.2 `PubspecConfigCache.kt`
-**作用**: 管理配置缓存与变更检测。
-**核心设计**:
-- **复合键**: 使用 `ProjectLocationHash + ModulePath` 作为 Key，确保多模块环境下配置互不干扰。
-- **Diff 算法**: 仅当 `assets` 路径列表、插件配置 (`classname`, `style` 等) 发生实质变化时才返回 `true`。
+**核心职责**: 监听 `pubspec.yaml` 的保存事件，触发防抖生成。
 
-### 3.3 `DartClassGenerator.kt`
-**作用**: 根据资源树生成 Dart 代码。
-**升级点**:
-- **双模式支持**:
-    - `generateRobust()`: 生成分层级类 (`Assets.images.logo`)，集成 Widget 方法。
-    - `generateLegacy()`: 生成扁平化常量 (`Assets.imagesLogo`)，兼容旧项目。
-- **统一命名规范**: 无论哪种模式，均通过 `getSafeName()` 统一处理特殊字符（空格、括号、关键词），杜绝语法错误。
+**关键方法**:
+*   **`beforeDocumentSaving(event: DocumentEvent)`**:
+    *   **触发时机**: 用户按下 Cmd+S 或 IDE 自动保存时。
+    *   **逻辑**:
+        1.  检查文件是否为 `pubspec.yaml`。
+        2.  从 `Document` 对象直接读取内容（确保获取的是编辑器中的最新内容，而非磁盘旧内容）。
+        3.  解析 YAML 并调用 `PubspecConfigCache.hasChanged(newConfig)`。
+        4.  如果配置有变更，调用 `ApplicationManager.getApplication().invokeLater { fileGenerator.generateOne(module) }`。
+            *   *使用 `invokeLater` 的原因*: `beforeDocumentSaving` 处于写锁等待状态，此时发起新的 WriteAction 会导致死锁或异常。推迟到 EDT 队列尾部执行是安全的。
 
-### 3.4 `FileGenerator.kt`
-**作用**: 生成流程的协调者 (Orchestrator)。
-**职责**:
-1.  调用 `FileHelperNew` 解析配置。
-2.  调用 `AssetTree` 构建资源树。
-3.  检查 `pubspec.yaml` 依赖 (`flutter_svg`, `lottie`) 并自动添加。
-4.  调用 `DartClassGenerator` 获取代码字符串。
-5.  **核心步骤**: 写入文件并调用 `CodeStyleManager.reformat()` 执行格式化。
+### 3.2 `PubspecConfigCache` (配置隔离与Diff)
+**类路径**: `src/main/java/com/crzsc/plugin/cache/PubspecConfigCache.kt`
+
+**核心职责**: 缓存上一次的配置快照，并在多模块环境下隔离配置。
+
+**关键数据结构**:
+```kotlin
+// Key: ProjectLocation + ModulePath (确保唯一性)
+// Value: ModulePubSpecConfig (配置快照)
+private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
+```
+
+**关键方法**:
+*   **`hasChanged(newConfig: ModulePubSpecConfig): Boolean`**:
+    *   **Diff 策略**: 不比较整个对象，而是逐字段比较关键配置：
+        *   `assets` 路径列表 (长度、内容)
+        *   `class_name`
+        *   `output_dir`
+        *   `flutter_assets_generator` 配置块的任意变更
+    *   **收益**: 用户仅修改 `version` 或 `description` 时，不会触发代码重新生成。
+
+### 3.3 `FileHelperNew` (配置解析)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/FileHelperNew.kt`
+
+**核心职责**: 从 Module 中解析 `pubspec.yaml` 配置，支持内存读取。
+
+**关键方法**:
+*   **`getPubSpecConfig(module: Module)`**:
+    *   **内存读取优先**:
+        ```kotlin
+        val document = FileDocumentManager.getInstance().getDocument(pubRoot.pubspec)
+        val content = document?.text ?: String(pubRoot.pubspec.contentsToByteArray())
+        ```
+        这是解决“读取磁盘旧文件导致配置回滚”Bug 的核心代码。
+    *   **默认值处理**: 移除了 `PluginSetting` 回退逻辑，所有配置项在未找到时返回硬编码的最佳实践默认值（SSOT 原则）。
+
+### 3.4 `DartClassGenerator` (代码生成引擎)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/DartClassGenerator.kt`
+
+**核心职责**: 将资源树转换为 Dart 代码字符串。
+
+**关键方法**:
+*   **`generate()`**: 根据 `style` 配置分发逻辑。
+*   **`generateRobust()` (v3.0 默认)**:
+    *   生成分层级的类结构。
+    *   为每个图片资源生成 `AssetGenImage` 对象实例。
+    *   集成 `.svg()` (若依赖 `flutter_svg`) 和 `.lottie()` (若依赖 `lottie`) 方法。
+*   **`generateLegacy()` (兼容模式)**:
+    *   生成扁平化的 `static const String` 字段。
+    *   生成的变量名使用 `camelCase` 风格 (例如 `assetsImagesLogo`)。
+*   **`getSafeName(name: String)` (统一命名算法)**:
+    *   处理所有非法字符（空格、`-`、`@` 等）。
+    *   处理 Dart 关键字冲突（如 `do`, `if` -> `kDo`, `kIf`）。
+    *   **重要性**: 它是整个插件稳定性的基石，确保生成的代码永远不会有语法错误。
+
+### 3.5 `FileGenerator` (流程编排)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/FileGenerator.kt`
+
+**核心职责**: 串联配置解析、资源树构建、代码生成与文件写入。
+
+**关键方法**:
+*   **`generateOne(config: ModulePubSpecConfig)`**:
+    *   **依赖注入**: 自动检查并添加 `flutter_svg` / `lottie` 依赖。
+    *   **格式化**:
+        ```kotlin
+        // 必须在 WriteAction 中执行
+        CodeStyleManager.getInstance(project).reformat(dartFile)
+        ```
+        恢复了被移除的自动格式化功能，保证生成的代码符合用户项目的代码风格。
 
 ## 4. 设计细节 (Design Details)
 
