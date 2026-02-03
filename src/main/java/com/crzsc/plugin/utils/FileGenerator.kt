@@ -20,6 +20,10 @@ import org.jetbrains.yaml.psi.YAMLSequence
 import java.io.File
 
 class FileGenerator(private val project: Project) {
+    companion object {
+        private val LOG = com.intellij.openapi.diagnostic.Logger.getInstance(FileGenerator::class.java)
+    }
+    
     private val ignoreDir = listOf("2.0x", "3.0x", "Mx", "Nx")
 
     /**
@@ -102,12 +106,13 @@ class FileGenerator(private val project: Project) {
                         document.setText(content)
                         psiDocumentManager.commitDocument(document)
                         
-                        // 5. 格式化生成的代码
+                        // 恢复自动格式化
+                        // 因为现在的生成过程已经在 invokeLater 中执行,且在 WriteCommandAction 中
+                        // 所以可以安全地执行格式化
                         try {
-                            CodeStyleManager.getInstance(project).reformatText(dartFile, 0, dartFile.textLength)
+                            CodeStyleManager.getInstance(project).reformat(dartFile)
                         } catch (e: Exception) {
-                            // 格式化失败不影响代码生成
-                            e.printStackTrace()
+                            LOG.warn("Failed to reformat file: ${dartFile.name}", e)
                         }
                         
                         showNotify("${config.module.name} : assets generate succeed")

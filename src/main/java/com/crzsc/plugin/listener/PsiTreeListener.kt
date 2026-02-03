@@ -61,27 +61,9 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
         val file = event.file ?: event.child?.containingFile
         val virtualFile = file?.virtualFile ?: return
 
-        // 1. 监听 pubspec.yaml 变更
-        // 当配置文件发生改变（如修改了 auto_detection 配置，或者增删了 flutter_svg 依赖），触发重新生成
-        if (virtualFile.name == "pubspec.yaml") {
-            val assets = FileHelperNew.getAssets(project)
-            for (config in assets) {
-                if (config.pubRoot.pubspec == virtualFile) {
-                    if (FileHelperNew.isAutoDetectionEnable(config)) {
-                        // 使用 Alarm 取消之前的请求，重新延迟执行，实现防抖 (1秒)
-                        alarm.cancelAllRequests()
-                        alarm.addRequest({
-                            if (!project.isDisposed) {
-                                fileGenerator.generateOne(config)
-                            }
-                        }, 1000)
-                    }
-                    return
-                }
-            }
-        }
-
-        // 2. 监听 assets 目录下的文件变更
+        // 注意: pubspec.yaml 的变更现在由 PubspecDocumentListener 处理
+        // 这里只监听 assets 目录下的文件变更
+        
         val assets = FileHelperNew.getAssets(project)
         for (config in assets) {
             if (FileHelperNew.isAutoDetectionEnable(config)) {
@@ -91,7 +73,7 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
                         for (assetFile in config.assetVFiles) {
                             // 判断变更文件是否位于配置的 assets 目录下
                             if (parentDir.path.startsWith(assetFile.path)) {
-                                // 资源文件变更响应较快，防抖时间设置为 300ms
+                                // 资源文件变更响应较快,防抖时间设置为 300ms
                                 alarm.cancelAllRequests()
                                 alarm.addRequest({
                                     if (!project.isDisposed) {

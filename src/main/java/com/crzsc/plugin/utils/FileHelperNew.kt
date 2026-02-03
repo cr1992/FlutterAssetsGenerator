@@ -57,8 +57,11 @@ object FileHelperNew {
             val moduleDir = module.guessModuleDir()
             val pubRoot = PubRoot.forDirectory(moduleDir)
             if (moduleDir != null && pubRoot != null) {
-                val fis = FileInputStream(pubRoot.pubspec.path)
-                val pubConfigMap = Yaml().load(fis) as? Map<String, Any>
+                // 优先从 Document 读取(内存中的最新内容)
+                val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(pubRoot.pubspec)
+                val content = document?.text ?: String(pubRoot.pubspec.contentsToByteArray())
+
+                val pubConfigMap = Yaml().load(content) as? Map<String, Any>
                 if (pubConfigMap != null) {
                     val assetVFiles = mutableListOf<VirtualFile>()
                     (pubConfigMap["flutter"] as? Map<*, *>)?.let { configureMap ->
