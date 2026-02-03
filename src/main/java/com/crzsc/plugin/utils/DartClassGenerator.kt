@@ -11,7 +11,8 @@ class DartClassGenerator(
     private val rootNode: AssetNode,
     private val config: ModulePubSpecConfig,
     private val hasSvg: Boolean, // 项目中是否包含 SVG 文件且有相应依赖
-    private val hasLottie: Boolean // 项目中是否包含 Lottie 文件且有相应依赖
+    private val hasLottie: Boolean, // 项目中是否包含 Lottie 文件且有相应依赖
+    private val flutterVersion: SemanticVersion? // Flutter SDK 版本,用于生成兼容的模板
 ) {
     companion object {
         private val LOG = Logger.getInstance(DartClassGenerator::class.java)
@@ -467,7 +468,13 @@ class SvgGenImage {
 """.trimIndent())
 
         if (hasSvg) {
-            buffer.append("""
+            // 判断是否使用 flutter_svg 2.0+ (Flutter >= 2.5.0 时使用 flutter_svg 2.0+)
+            val useFlutterSvg2 = flutterVersion != null && flutterVersion >= SemanticVersion(2, 5, 0)
+            
+            if (useFlutterSvg2) {
+                // flutter_svg 2.0+: 移除已废弃的 color/colorBlendMode/cacheColorFilter 参数
+                LOG.info("[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 2.x compatible template")
+                buffer.append("""
   SvgPicture svg({
     Key? key,
     bool matchTextDirection = false,
@@ -483,9 +490,48 @@ class SvgGenImage {
     bool excludeFromSemantics = false,
     SvgTheme? theme,
     Clip clipBehavior = Clip.hardEdge,
-    @deprecated Color? color,
-    @deprecated BlendMode colorBlendMode = BlendMode.srcIn,
-    @deprecated bool cacheColorFilter = false,
+  }) {
+    return SvgPicture.asset(
+      _assetName,
+      key: key,
+      matchTextDirection: matchTextDirection,
+      bundle: bundle,
+      package: package,
+      width: width,
+      height: height,
+      fit: fit,
+      alignment: alignment,
+      allowDrawingOutsideViewBox: allowDrawingOutsideViewBox,
+      placeholderBuilder: placeholderBuilder,
+      semanticsLabel: semanticsLabel,
+      excludeFromSemantics: excludeFromSemantics,
+      theme: theme,
+      clipBehavior: clipBehavior,
+    );
+  }
+""".trimIndent())
+            } else {
+                // flutter_svg 1.x: 保留 color/colorBlendMode/cacheColorFilter 参数
+                LOG.info("[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 1.x compatible template")
+                buffer.append("""
+  SvgPicture svg({
+    Key? key,
+    bool matchTextDirection = false,
+    AssetBundle? bundle,
+    String? package,
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+    AlignmentGeometry alignment = Alignment.center,
+    bool allowDrawingOutsideViewBox = false,
+    WidgetBuilder? placeholderBuilder,
+    String? semanticsLabel,
+    bool excludeFromSemantics = false,
+    SvgTheme? theme,
+    Clip clipBehavior = Clip.hardEdge,
+    Color? color,
+    BlendMode colorBlendMode = BlendMode.srcIn,
+    bool cacheColorFilter = false,
   }) {
     return SvgPicture.asset(
       _assetName,
@@ -509,6 +555,7 @@ class SvgGenImage {
     );
   }
 """.trimIndent())
+            }
         }
 
         buffer.append("""
