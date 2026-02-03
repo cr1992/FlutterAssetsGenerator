@@ -185,6 +185,21 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
         ```
         恢复了被移除的自动格式化功能，保证生成的代码符合用户项目的代码风格。
 
+### 3.6 `AssetsLineMarkerProvider` (编辑器增强)
+**类路径**: `src/main/java/com/crzsc/plugin/provider/AssetsLineMarkerProvider.kt`
+
+**核心职责**: 为 Dart 代码中的资源字符串提供行标记（Line Marker），显示资源预览图标。
+
+**关键逻辑**:
+*   **识别资源引用**: 扫描 Dart 代码中的字符串字面量。
+*   **路径解析**: 
+    *   通过 `FileHelperNew` 获取当前模块的配置。
+    *   尝试解析字符串对应的实际文件路径（支持 `assets/` 前缀或 `package:` 前缀）。
+*   **图标渲染**:
+    *   **SVG**: 使用 `SVGLoader` 加载并渲染预览。
+    *   **图片**: 使用 `IconUtil` 获取文件默认图标。
+*   **性能考量**: 仅对 Flutter 模块的 Dart 文件生效，并进行了必要的文件存在性检查。
+
 ## 4. 设计细节 (Design Details)
 
 ### 4.1 自动依赖管理

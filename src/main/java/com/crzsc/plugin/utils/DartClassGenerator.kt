@@ -245,7 +245,7 @@ class DartClassGenerator(
                     }
 
                     else -> {
-                        buffer.append("  ${if (isRoot) "static const" else "final"} String $fieldName = ${if (isRoot) "" else "const "}'$fullPath';\n")
+                        buffer.append("  ${if (isRoot) "static const" else "final"} String $fieldName = '$fullPath';\n")
                     }
                 }
             }
@@ -425,7 +425,7 @@ class DartClassGenerator(
                     }
 
                     else -> {
-                        sb.append("  final String $fieldName = const '$fullPath';\n")
+                        sb.append("  final String $fieldName = '$fullPath';\n")
                     }
                 }
             }

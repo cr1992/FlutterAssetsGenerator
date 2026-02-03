@@ -123,7 +123,6 @@ object FileHelperNew {
     }
 
 
-
     fun isWithLeadingWithPackageName(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_LEADING_WITH_PACKAGE_NAME) as Boolean?
             ?: false
@@ -223,7 +222,6 @@ object FileHelperNew {
     fun getGenerationStyle(config: ModulePubSpecConfig): String {
         return readSetting(config, "style") as? String ?: "robust"
     }
-
 }
 
 /**

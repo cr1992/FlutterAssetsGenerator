@@ -37,7 +37,29 @@ object AssetTreeBuilder {
         }
         
         LOG.info("[FlutterAssetsGenerator #AssetTreeBuilder] [AssetTreeBuilder] Asset tree built successfully")
+        
+        pruneEmptyDirectories(rootNode)
+        
         return rootNode
+    }
+
+    /**
+     * 递归移除空的目录节点
+     */
+    private fun pruneEmptyDirectories(node: AssetNode): Boolean {
+        if (node.type != MediaType.DIRECTORY) return false
+        
+        val iterator = node.children.iterator()
+        while (iterator.hasNext()) {
+            val child = iterator.next()
+            val isEmptyDir = pruneEmptyDirectories(child)
+            if (isEmptyDir) {
+                LOG.info("[FlutterAssetsGenerator #AssetTreeBuilder] [prune] Removing empty directory: ${child.name}")
+                iterator.remove()
+            }
+        }
+        
+        return node.children.isEmpty()
     }
 
     /**
