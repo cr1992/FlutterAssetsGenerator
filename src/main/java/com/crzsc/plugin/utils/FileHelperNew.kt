@@ -176,10 +176,12 @@ object FileHelperNew {
      */
     private fun getGeneratedFilePath(config: ModulePubSpecConfig): VirtualFile {
         return config.pubRoot.lib?.let { lib ->
-            // 没有配置则返回默认path
+            // 读取配置的输出目录
             val filePath: String = readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
                 ?: PluginSetting.instance.filePath ?: Constants.DEFAULT_OUTPUT_DIR
+            
             println("getGeneratedFilePath $filePath")
+            
             if (!filePath.contains(File.separator)) {
                 return@let lib.findOrCreateChildDir(lib, filePath)
             } else {

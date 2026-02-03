@@ -1,6 +1,7 @@
 <idea-plugin>
     <id>com.crzsc.FlutterAssetsGenerator</id>
     <name>FlutterAssetsGenerator</name>
+    <icon src="/META-INF/pluginIcon.svg"/>
     <vendor email="cr1992@qq.com" url="https://github.com/cr1992/FlutterAssetsGenerator">Ray&amp;Zsc</vendor>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
@@ -31,12 +32,25 @@
     </applicationListeners>
 
     <actions>
-        <!-- Add your actions here -->
-        <action id="action.generate" class="com.crzsc.plugin.actions.GenerateAction" text="Generate Flutter Assets"
-                description="Generate Assets class ">
-            <add-to-group group-id="BuildMenu" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="alt g"/>
-        </action>
+        <!-- Flutter Assets Generator 工具组 -->
+        <group id="FlutterAssetsGenerator.ToolsMenu" text="Flutter Assets Generator" popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            
+            <!-- 生成资源文件 -->
+            <action id="action.generate" class="com.crzsc.plugin.actions.GenerateAction" 
+                    text="Generate Assets" 
+                    description="Generate Flutter assets code for all modules">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt g"/>
+            </action>
+            
+            <!-- 一键配置项目 -->
+            <action id="action.setup" class="com.crzsc.plugin.actions.SetupProjectAction"
+                    text="Setup Project Configuration"
+                    description="Add default flutter_assets_generator configuration to pubspec.yaml">
+            </action>
+        </group>
+        
+        <!-- 右键菜单：配置路径到 pubspec.yaml -->
         <action id="com.crzsc.plugin.actions.GenerateDirAction" class="com.crzsc.plugin.actions.GenerateDirAction"
                 text="Flutter: Configuring Paths" description="Configuring Paths in pubspec.yaml"
                 icon="AllIcons.Actions.BuildLoadChanges">

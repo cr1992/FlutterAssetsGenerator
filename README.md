@@ -1,59 +1,169 @@
-It's a plugin that generates an asset index which we can easily find.It can be used on Android Studio or Idea.
+# Flutter Assets Generator
 
-## How to use
+[English](#english) | [中文](#chinese)
 
-### 1.Configuring paths in pubspec.yaml
+<a name="english"></a>
+## English
 
-Plugin now supports automatic configuration:
-- Right-click on folder or file, then click
-  <br>`Flutter: Configuring Paths`.
-<br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9nxz6ttg30ed0ootl5.gif)
-### 2.Generate file
+A powerful Android Studio / IntelliJ plugin that automatically generates a type-safe, hierarchical asset index for your Flutter projects.
 
-You can generate file by these ways:
+### Core Features
 
-- `Build` => `Generate Flutter Assets`
-<br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9rnd51mg30hv0orjz6.gif)
-- Press `Option`(mac)/`Alt`(win) + `G`,It will generate assets.dart on lib/generated.
+- **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
+- **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
+- **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects for easy usage.
+- **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies to `pubspec.yaml` if needed (when auto-detection is enabled).
+- **Auto Update**: Watch for asset file AND configuration changes (`pubspec.yaml`) to regenerate automatically.
 
-Simply use it like:
+### Usage
 
-```dart
-Image.asset(
-          Assets.imageLoading,
-          width: 24,
-          height: 24,
-          fit: BoxFit.contain,
-        )
-```
+#### 1. Quick Setup (Recommended)
 
-### 3.Extras
+For first-time users, use the one-click setup:
 
-- You can locate file quickly by click line-marker.
-  <br>![](https://tva1.sinaimg.cn/large/008vxvgGly1h9h9vyjccyg30hv0ordpz.gif)
-- Plugin will observe your changes on assets path and update file.
-  <br><img style="max-width:100%;overflow:hidden;" src="https://tva1.sinaimg.cn/large/008vxvgGly1h9h6yqqx09g312l0q4k4n.gif" alt="">
+- **Menu**: Click `Tools` -> `Flutter Assets Generator` -> `Setup Project Configuration`.
 
-## Settings
-### Global
-`Preferences` => `Tools` => `FlutterAssetsGenerator`
-### Module based
-You can change default settings by add following contents in your `pubspec.yaml`.
+This will automatically add the default configuration to your `pubspec.yaml`:
 
 ```yaml
 flutter_assets_generator:
-  # Optional. Sets the directory of generated localization files. Provided value should be a valid path on lib dir. Default: generated
-  output_dir: generated
-  # Optional. Sets whether utomatic monitoring of file changes. Default: true
-  auto_detection: true
-  # Optional. Sets file name conversion rules. Default: true
-  named_with_parent: true
-  # Optional. Sets the name for the generated localization file. Default: assets
+  output_dir: lib/generated/
   output_filename: assets
-  # Optional. Sets the name for the generated localization class. Default: Assets
   class_name: Assets
-  # Optional. Sets the filename split pattern for filename split. Default: [-_]
-  filename_split_pattern: "[-_]"
-  # Optional. Configuring ignore paths. Default: [],e.g: ["assets/fonts", "assets/images/dark", ...]
+  auto_detection: true
   path_ignore: []
+```
+
+You can then customize these settings as needed.
+
+#### 2. Manual Configuration (Optional)
+
+Alternatively, manually add `flutter_assets_generator` to your `pubspec.yaml`:
+
+```yaml
+flutter_assets_generator:
+  # Sets the directory of generated files. Default: lib/generated
+  output_dir: lib/generated/
+  # Sets the name for the generated file. Default: assets
+  output_filename: assets
+  # Sets the name for the root class. Default: Assets
+  class_name: Assets
+  # Enable/Disable auto monitoring and dependency management. Default: true
+  auto_detection: true 
+  # Ignore specific paths. Default: []
+  path_ignore: ["assets/fonts"]
+```
+
+#### 3. Generate File
+
+- **Menu**: Click `Tools` -> `Flutter Assets Generator` -> `Generate Assets`.
+- **Shortcut**: Press `Option`(Mac) / `Alt`(Win) + `G`.
+
+#### 4. Access Assets in Code
+
+The plugin generates a strict, type-safe hierarchy:
+
+```dart
+// Standard Image
+Assets.images.logo.image(width: 24, height: 24);
+
+// SVG (Requires flutter_svg dependency)
+Assets.icons.home.svg(color: Colors.blue);
+
+// Lottie (Requires lottie dependency)
+Assets.anim.loading.lottie(repeat: true);
+
+// Custom widget builder - allows you to build any widget with the asset path
+Assets.images.logo.custom(
+  builder: (context, assetPath) {
+    return YourCustomWidget(assetPath: assetPath);
+  },
+);
+    
+// Get raw path string
+String path = Assets.images.logo.path;
+```
+
+---
+
+<a name="chinese"></a>
+## 中文
+
+一个强大的 Android Studio / IntelliJ 插件，为您的 Flutter 项目自动生成类型安全、分层级的资源索引类。
+
+### 核心功能
+
+-   **分层生成**：根据目录结构生成对应的嵌套类，精确反映资源层级（例如 `Assets.images.logo`）。
+-   **智能类型支持**：自动识别 `SVG` 和 `Lottie` 动画文件。
+-   **Widget 集成**：直接在资源对象上生成 `.svg()` 和 `.lottie()` 方法，极大简化代码编写。
+-   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg` 或 `lottie`（需开启自动检测）。
+-   **自动更新**：监听资源文件及配置变更 (`pubspec.yaml`) 并自动重新生成。
+
+### 使用方法
+
+#### 1. 快速配置（推荐）
+
+首次使用时，使用一键配置功能：
+
+-   **菜单**: 点击 `Tools` -> `Flutter Assets Generator` -> `Setup Project Configuration`。
+
+这将自动在您的 `pubspec.yaml` 中添加默认配置：
+
+```yaml
+flutter_assets_generator:
+  output_dir: lib/generated/
+  output_filename: assets
+  class_name: Assets
+  auto_detection: true
+  path_ignore: []
+```
+
+之后您可以根据需要自定义这些设置。
+
+#### 2. 手动配置（可选）
+
+您也可以手动在 `pubspec.yaml` 中添加 `flutter_assets_generator` 进行自定义：
+
+```yaml
+flutter_assets_generator:
+  # 生成文件的输出目录。默认: lib/generated
+  output_dir: lib/generated/
+  # 生成文件的文件名 (无后缀)。默认: assets
+  output_filename: assets
+  # 生成的根类名。默认: Assets
+  class_name: Assets
+  # 是否开启自动监测和依赖管理。默认: true
+  auto_detection: true
+  # 忽略的路径。默认: []
+  path_ignore: ["assets/fonts"]
+```
+
+#### 3. 生成文件
+
+-   **菜单**: 点击 `Tools` -> `Flutter Assets Generator` -> `Generate Assets`。
+-   **快捷键**: 按下 `Option`(Mac) / `Alt`(Win) + `G`。
+
+#### 4. 代码调用
+
+生成的代码完美支持 IDE 自动补全和类型检查：
+
+```dart
+// 普通图片 (返回 Image Widget)
+Assets.images.logo.image(width: 24, height: 24);
+
+// SVG (返回 SvgPicture Widget)
+Assets.icons.home.svg(color: Colors.blue);
+
+// Lottie (返回 LottieBuilder Widget)
+Assets.anim.loading.lottie(repeat: true);
+
+// 自定义 Widget 构建器 - 允许您使用资源路径构建任何 Widget
+Assets.images.logo.custom(
+  builder: (context, assetPath) {
+    return YourCustomWidget(assetPath: assetPath);
+  },
+);
+    
+// 获取原始路径字符串
+String path = Assets.images.logo.path;
 ```

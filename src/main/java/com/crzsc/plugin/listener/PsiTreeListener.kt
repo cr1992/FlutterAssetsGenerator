@@ -7,11 +7,13 @@ import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.psi.PsiTreeChangeListener
 import com.intellij.util.castSafelyTo
-import java.util.*
-import kotlin.concurrent.timerTask
+import com.intellij.util.Alarm
 
 class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     private val fileGenerator = FileGenerator(project)
+    
+    // 使用 IntelliJ Alarm 工具类进行防抖处理，确保在 SWING 线程执行
+    private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, project)
 
     override fun beforePropertyChange(event: PsiTreeChangeEvent) {
     }
@@ -56,19 +58,47 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     }
 
     private fun handleEvent(event: PsiTreeChangeEvent) {
+        val file = event.file ?: event.child?.containingFile
+        val virtualFile = file?.virtualFile ?: return
+
+        // 1. 监听 pubspec.yaml 变更
+        // 当配置文件发生改变（如修改了 auto_detection 配置，或者增删了 flutter_svg 依赖），触发重新生成
+        if (virtualFile.name == "pubspec.yaml") {
+            val assets = FileHelperNew.getAssets(project)
+            for (config in assets) {
+                if (config.pubRoot.pubspec == virtualFile) {
+                    if (FileHelperNew.isAutoDetectionEnable(config)) {
+                        // 使用 Alarm 取消之前的请求，重新延迟执行，实现防抖 (1秒)
+                        alarm.cancelAllRequests()
+                        alarm.addRequest({
+                            if (!project.isDisposed) {
+                                fileGenerator.generateOne(config)
+                            }
+                        }, 1000)
+                    }
+                    return
+                }
+            }
+        }
+
+        // 2. 监听 assets 目录下的文件变更
         val assets = FileHelperNew.getAssets(project)
         for (config in assets) {
             if (FileHelperNew.isAutoDetectionEnable(config)) {
-                // 该Module开启了自动检测
                 event.child?.let { changedFile ->
-                    changedFile.parent.castSafelyTo<PsiDirectory>()?.let { dir ->
-                        //assets目录发生改变 这里延迟生成避免报错
-                        for (file in config.assetVFiles) {
-                            if (dir.virtualFile.path.startsWith(file.path)) {
-                                Timer().schedule(timerTask {
-                                    fileGenerator.generateOne(config)
+                    val parentDir = changedFile.parent.castSafelyTo<PsiDirectory>()?.virtualFile
+                    if (parentDir != null) {
+                        for (assetFile in config.assetVFiles) {
+                            // 判断变更文件是否位于配置的 assets 目录下
+                            if (parentDir.path.startsWith(assetFile.path)) {
+                                // 资源文件变更响应较快，防抖时间设置为 300ms
+                                alarm.cancelAllRequests()
+                                alarm.addRequest({
+                                    if (!project.isDisposed) {
+                                        fileGenerator.generateOne(config)
+                                    }
                                 }, 300)
-                                break
+                                return
                             }
                         }
                     }
