@@ -73,7 +73,7 @@ object FileHelperNew {
                                         val assetsPath = if (index == -1) {
                                             path
                                         } else {
-                                            path.substring(0, index)
+                                            path.take(index)
                                         }
                                         val assetVFile = moduleDir.findChild(assetsPath)
                                             ?: moduleDir.createChildDirectory(this, assetsPath)
@@ -240,6 +240,6 @@ data class ModulePubSpecConfig(
         if (FileHelperNew.isWithLeadingWithPackageName(this)) {
             return "packages/${map["name"]}/"
         }
-        return "";
+        return ""
     }
 }

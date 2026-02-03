@@ -58,9 +58,6 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     }
 
     private fun handleEvent(event: PsiTreeChangeEvent) {
-        val file = event.file ?: event.child?.containingFile
-        val virtualFile = file?.virtualFile ?: return
-
         // 注意: pubspec.yaml 的变更现在由 PubspecDocumentListener 处理
         // 这里只监听 assets 目录下的文件变更
         

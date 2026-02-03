@@ -155,6 +155,7 @@ object AssetTreeBuilder {
             val content = String(file.inputStream.readNBytes(200.coerceAtMost(file.length.toInt())))
             content.contains("\"v\"") && (content.contains("\"layers\"") || content.contains("\"ip\""))
         } catch (e: Exception) {
+            e.printStackTrace()
             false
         }
     }

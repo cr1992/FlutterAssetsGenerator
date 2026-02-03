@@ -154,7 +154,7 @@ class FileGenerator(private val project: Project) {
                     path = path.removeSuffix(File.separator)
                     if (path.contains(File.separator)) {
                         val subIndex = path.lastIndexOf(File.separator)
-                        parentPath = "$parentPath${File.separator}${path.substring(0, subIndex + 1)}"
+                        parentPath = "$parentPath${File.separator}${path.take(subIndex + 1)}"
                         path = path.substring(subIndex + 1, path.length)
                     }
                     val asset = File(parentPath, path)
