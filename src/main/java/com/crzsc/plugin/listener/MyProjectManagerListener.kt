@@ -20,9 +20,10 @@ class MyProjectManagerListener : ProjectManagerListener {
         super.projectOpened(project)
         
         // 注册 PSI 树监听器(用于监听 assets 文件变更)
+        // 使用 Project 作为 parentDisposable，当项目关闭时会自动注销监听器
         val psiListener = PsiTreeListener(project)
         psiListenersMap[project] = psiListener
-        PsiManager.getInstance(project).addPsiTreeChangeListener(psiListener)
+        PsiManager.getInstance(project).addPsiTreeChangeListener(psiListener, project)
         
         // 注册文档保存监听器(用于监听 pubspec.yaml 保存)
         val docListener = PubspecDocumentListener(project)
@@ -37,10 +38,7 @@ class MyProjectManagerListener : ProjectManagerListener {
     override fun projectClosing(project: Project) {
         super.projectClosing(project)
         
-        // 移除 PSI 树监听器
-        psiListenersMap.remove(project)?.let {
-            PsiManager.getInstance(project).removePsiTreeChangeListener(it)
-        }
+
         
         // 断开消息总线连接
         messageBusConnections.remove(project)?.disconnect()
