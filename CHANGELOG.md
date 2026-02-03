@@ -1,6 +1,21 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 [//]: # (# FlutterAssetsGenerator Changelog)
+## [3.0.0]
+### BREAKING CHANGES
+- **Default Generation Style**: The default generated code is now **hierarchical** (e.g., `Assets.images.logo`) instead of flat. To restore the old flat behavior, add `style: camel_case` to your `plugin` config in `pubspec.yaml`.
+
+### Added
+- **Multi-Module Support**: Complete isolation for config per module/project.
+- **Legacy Compatibility**: Added `style` option (`robust` vs `camel_case`) to support legacy flat generation style.
+- **Safe Generation**: Moved generation logic to `invokeLater` to prevent file locking issues.
+- **Auto Format**: Restored automatic code formatting for generated files.
+
+### Changed
+- **Smart Trigger**: Configuration changes now trigger on **File Save** (Cmd+S) instead of typing, reducing unnecessary builds.
+- **Config Reading**: Prioritize reading from Editor Memory (Document) over Disk to prevent stale data issues.
+- **Refined Naming**: Unified special character handling for asset filenames across all modes.
+
 ## [2.5.0]
 ### Fixed
 - Bug fix.

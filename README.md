@@ -10,12 +10,13 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 ### Core Features
 
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
+- **Legacy Compatibility**: Supports `style: camel_case` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
 - **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
-- **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects for easy usage.
-- **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies to `pubspec.yaml` if needed (when auto-detection is enabled).
-- **Auto Update**: 
-    - **Assets**: Watch for image additions/deletions and regenerate automatically (with debounce).
-    - **Config**: Smartly detects changes in `pubspec.yaml` upon **Save** (Cmd+S/Ctrl+S). Only triggers when actual configuration changes (e.g. class name, paths), avoiding unnecessary builds.
+- **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects.
+- **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies.
+- **Smart Auto Update**: 
+    - **Assets**: Watch for image additions/deletions and regenerate automatically.
+    - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
 
 ### Usage
 
@@ -33,14 +34,11 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
+  style: robust # Options: robust (default), camel_case (legacy)
   path_ignore: []
 ```
 
-You can then customize these settings as needed.
-
 #### 2. Manual Configuration (Optional)
-
-Alternatively, manually add `flutter_assets_generator` to your `pubspec.yaml`:
 
 ```yaml
 flutter_assets_generator:
@@ -51,7 +49,9 @@ flutter_assets_generator:
   # Sets the name for the root class. Default: Assets
   class_name: Assets
   # Enable/Disable auto monitoring and dependency management. Default: true
-  auto_detection: true 
+  auto_detection: true
+  # Generation style: robust (Hierarchical) or camel_case (Flat legacy). Default: robust
+  style: robust
   # Ignore specific paths. Default: []
   path_ignore: ["assets/fonts"]
 ```
@@ -60,7 +60,7 @@ flutter_assets_generator:
 
 - **Menu**: Click `Tools` -> `Flutter Assets Generator` -> `Generate Assets`.
 - **Shortcut**: Press `Option`(Mac) / `Alt`(Win) + `G`.
-- **Auto-Format**: The generated code is automatically formatted according to your project's Dart style guide.
+- **Auto Format**: Generated code is automatically formatted.
 
 #### 4. Access Assets in Code
 
@@ -97,12 +97,13 @@ String path = Assets.images.logo.path;
 ### 核心功能
 
 -   **分层生成**：根据目录结构生成对应的嵌套类，精确反映资源层级（例如 `Assets.images.logo`）。
+-   **旧版兼容**：支持 `style: camel_case` 以生成扁平变量名 (例如 `Assets.imagesLogo`)，方便迁移。
 -   **智能类型支持**：自动识别 `SVG` 和 `Lottie` 动画文件。
--   **Widget 集成**：直接在资源对象上生成 `.svg()` 和 `.lottie()` 方法，极大简化代码编写。
--   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg` 或 `lottie`（需开启自动检测）。
--   **自动更新**：
-    -   **资源文件**: 监听图片文件的增删，自动重新生成（带防抖）。
-    -   **配置文件**: 智能监听 `pubspec.yaml` 的**保存**动作 (Cmd+S/Ctrl+S)。只有配置真正发生变化时（如修改类名、路径）才触发生成，拒绝无效构建。
+-   **Widget 集成**：直接在资源对象上生成 `.svg()` 和 `.lottie()` 方法。
+-   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg` 或 `lottie`。
+-   **智能自动更新**：
+    -   **资源文件**: 监听图片文件增删，自动重新生成。
+    -   **配置文件**: 监听 `pubspec.yaml` 的**保存**动作 (Cmd+S)。智能 Diff 算法确保只在配置真正变化时构建。
 
 ### 使用方法
 
@@ -120,14 +121,11 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
+  style: robust # 可选值: robust (默认), camel_case (旧版兼容)
   path_ignore: []
 ```
 
-之后您可以根据需要自定义这些设置。
-
 #### 2. 手动配置（可选）
-
-您也可以手动在 `pubspec.yaml` 中添加 `flutter_assets_generator` 进行自定义：
 
 ```yaml
 flutter_assets_generator:
@@ -139,6 +137,8 @@ flutter_assets_generator:
   class_name: Assets
   # 是否开启自动监测和依赖管理。默认: true
   auto_detection: true
+  # 生成风格: robust (分层级) 或 camel_case (旧版扁平)。默认: robust
+  style: robust
   # 忽略的路径。默认: []
   path_ignore: ["assets/fonts"]
 ```
@@ -147,7 +147,7 @@ flutter_assets_generator:
 
 -   **菜单**: 点击 `Tools` -> `Flutter Assets Generator` -> `Generate Assets`。
 -   **快捷键**: 按下 `Option`(Mac) / `Alt`(Win) + `G`。
--   **自动格式化**: 生成的代码会自动按照项目的 Dart 代码风格进行格式化。
+-   **自动格式化**: 生成的代码会自动格式化。
 
 #### 4. 代码调用
 

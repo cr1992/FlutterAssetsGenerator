@@ -10,7 +10,6 @@ import io.flutter.utils.FlutterModuleUtils
 import org.jetbrains.kotlin.idea.util.projectStructure.allModules
 import org.jetbrains.kotlin.konan.file.File
 import org.yaml.snakeyaml.Yaml
-import java.io.FileInputStream
 import java.util.*
 import java.util.regex.Pattern
 
@@ -58,7 +57,8 @@ object FileHelperNew {
             val pubRoot = PubRoot.forDirectory(moduleDir)
             if (moduleDir != null && pubRoot != null) {
                 // 优先从 Document 读取(内存中的最新内容)
-                val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(pubRoot.pubspec)
+                val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
+                    .getDocument(pubRoot.pubspec)
                 val content = document?.text ?: String(pubRoot.pubspec.contentsToByteArray())
 
                 val pubConfigMap = Yaml().load(content) as? Map<String, Any>
@@ -118,7 +118,8 @@ object FileHelperNew {
      * 是否开启了自动检测
      */
     fun isAutoDetectionEnable(config: ModulePubSpecConfig): Boolean {
-        return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean? ?: PluginSetting.instance.autoDetection
+        return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean?
+            ?: PluginSetting.instance.autoDetection
     }
 
     /**
@@ -131,15 +132,16 @@ object FileHelperNew {
 
     fun isWithLeadingWithPackageName(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_LEADING_WITH_PACKAGE_NAME) as Boolean?
-                ?: PluginSetting.instance.leadingWithPackageName
+            ?: PluginSetting.instance.leadingWithPackageName
     }
 
     /**
      * 读取生成的类名配置
      */
     fun getGeneratedClassName(config: ModulePubSpecConfig): String {
-        return readSetting(config, Constants.KEY_CLASS_NAME) as String? ?: PluginSetting.instance.className
-        ?: Constants.DEFAULT_CLASS_NAME
+        return readSetting(config, Constants.KEY_CLASS_NAME) as String?
+            ?: PluginSetting.instance.className
+            ?: Constants.DEFAULT_CLASS_NAME
     }
 
     /**
@@ -149,7 +151,8 @@ object FileHelperNew {
         return try {
             val pattern =
                 readSetting(config, Constants.FILENAME_SPLIT_PATTERN) as String?
-                    ?: PluginSetting.instance.filenameSplitPattern ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
+                    ?: PluginSetting.instance.filenameSplitPattern
+                    ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
             Pattern.compile(pattern)
             pattern
         } catch (e: Exception) {
@@ -182,9 +185,9 @@ object FileHelperNew {
             // 读取配置的输出目录
             val filePath: String = readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
                 ?: PluginSetting.instance.filePath ?: Constants.DEFAULT_OUTPUT_DIR
-            
+
             println("getGeneratedFilePath $filePath")
-            
+
             if (!filePath.contains(File.separator)) {
                 return@let lib.findOrCreateChildDir(lib, filePath)
             } else {
@@ -218,8 +221,9 @@ object FileHelperNew {
     }
 
     fun getGeneratedFileName(config: ModulePubSpecConfig): String =
-        readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String ?: PluginSetting.instance.fileName
-        ?: Constants.DEFAULT_CLASS_NAME.lowercase()
+        readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String
+            ?: PluginSetting.instance.fileName
+            ?: Constants.DEFAULT_CLASS_NAME.lowercase()
 
     /**
      * 读取生成风格配置
@@ -243,8 +247,8 @@ data class ModulePubSpecConfig(
 ) {
     fun getLeadingWithPackageNameIfChecked(): String {
         if (FileHelperNew.isWithLeadingWithPackageName(this)) {
-            return  "packages/${map["name"]}/"
+            return "packages/${map["name"]}/"
         }
-        return  "";
+        return "";
     }
 }

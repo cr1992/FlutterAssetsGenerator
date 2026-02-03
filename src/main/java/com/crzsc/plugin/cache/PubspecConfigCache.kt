@@ -4,7 +4,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import org.yaml.snakeyaml.Yaml
-import java.io.FileInputStream
 import java.util.concurrent.ConcurrentHashMap
 
 /**
