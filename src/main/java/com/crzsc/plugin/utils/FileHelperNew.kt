@@ -221,6 +221,14 @@ object FileHelperNew {
         readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String ?: PluginSetting.instance.fileName
         ?: Constants.DEFAULT_CLASS_NAME.lowercase()
 
+    /**
+     * 读取生成风格配置
+     * return "robust" | "camel_case"
+     */
+    fun getGenerationStyle(config: ModulePubSpecConfig): String {
+        return readSetting(config, "style") as? String ?: "robust"
+    }
+
 }
 
 /**

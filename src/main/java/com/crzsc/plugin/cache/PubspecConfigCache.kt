@@ -28,14 +28,12 @@ data class PubspecConfig(
     val outputDir: String,
     val className: String,
     val filenameSplitPattern: String,
-    val pathIgnore: List<String>
+    val pathIgnore: List<String>,
+    val generationStyle: String // "robust" (default), "camel_case", "snake_case"
 ) {
     companion object {
         private val LOG = Logger.getInstance(PubspecConfig::class.java)
         
-        /**
-         * 从 pubspec.yaml 读取配置
-         */
         /**
          * 从 pubspec.yaml 读取配置
          */
@@ -71,6 +69,9 @@ data class PubspecConfig(
                 val filenameSplitPattern = pluginConfig?.get("filename_split_pattern") as? String ?: "[-_]"
                 val pathIgnore = (pluginConfig?.get("path_ignore") as? List<*>)
                     ?.mapNotNull { it as? String } ?: emptyList()
+                    
+                // 读取生成风格配置: 'robust' (默认,新版), 'camel_case' (旧版兼容)
+                val generationStyle = pluginConfig?.get("style") as? String ?: "robust"
                 
                 return PubspecConfig(
                     assetPaths = assetPaths,
@@ -82,7 +83,8 @@ data class PubspecConfig(
                     outputDir = outputDir,
                     className = className,
                     filenameSplitPattern = filenameSplitPattern,
-                    pathIgnore = pathIgnore
+                    pathIgnore = pathIgnore,
+                    generationStyle = generationStyle
                 )
             } catch (e: Exception) {
                 LOG.warn("[FlutterAssetsGenerator #${project.name}] Failed to read pubspec config", e)
@@ -184,6 +186,9 @@ object PubspecConfigCache {
         }
         if (old.autoDetection != new.autoDetection) {
             LOG.info("[FlutterAssetsGenerator #${project.name}] auto_detection changed: ${old.autoDetection} -> ${new.autoDetection}")
+        }
+        if (old.generationStyle != new.generationStyle) {
+            LOG.info("[FlutterAssetsGenerator #${project.name}] generation_style changed: ${old.generationStyle} -> ${new.generationStyle}")
         }
     }
 }

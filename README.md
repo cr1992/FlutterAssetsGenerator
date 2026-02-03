@@ -13,7 +13,9 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
 - **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects for easy usage.
 - **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies to `pubspec.yaml` if needed (when auto-detection is enabled).
-- **Auto Update**: Watch for asset file AND configuration changes (`pubspec.yaml`) to regenerate automatically.
+- **Auto Update**: 
+    - **Assets**: Watch for image additions/deletions and regenerate automatically (with debounce).
+    - **Config**: Smartly detects changes in `pubspec.yaml` upon **Save** (Cmd+S/Ctrl+S). Only triggers when actual configuration changes (e.g. class name, paths), avoiding unnecessary builds.
 
 ### Usage
 
@@ -58,6 +60,7 @@ flutter_assets_generator:
 
 - **Menu**: Click `Tools` -> `Flutter Assets Generator` -> `Generate Assets`.
 - **Shortcut**: Press `Option`(Mac) / `Alt`(Win) + `G`.
+- **Auto-Format**: The generated code is automatically formatted according to your project's Dart style guide.
 
 #### 4. Access Assets in Code
 
@@ -97,7 +100,9 @@ String path = Assets.images.logo.path;
 -   **智能类型支持**：自动识别 `SVG` 和 `Lottie` 动画文件。
 -   **Widget 集成**：直接在资源对象上生成 `.svg()` 和 `.lottie()` 方法，极大简化代码编写。
 -   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg` 或 `lottie`（需开启自动检测）。
--   **自动更新**：监听资源文件及配置变更 (`pubspec.yaml`) 并自动重新生成。
+-   **自动更新**：
+    -   **资源文件**: 监听图片文件的增删，自动重新生成（带防抖）。
+    -   **配置文件**: 智能监听 `pubspec.yaml` 的**保存**动作 (Cmd+S/Ctrl+S)。只有配置真正发生变化时（如修改类名、路径）才触发生成，拒绝无效构建。
 
 ### 使用方法
 
@@ -142,6 +147,7 @@ flutter_assets_generator:
 
 -   **菜单**: 点击 `Tools` -> `Flutter Assets Generator` -> `Generate Assets`。
 -   **快捷键**: 按下 `Option`(Mac) / `Alt`(Win) + `G`。
+-   **自动格式化**: 生成的代码会自动按照项目的 Dart 代码风格进行格式化。
 
 #### 4. 代码调用
 
