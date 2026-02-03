@@ -71,6 +71,8 @@ class SetupProjectAction : AnAction() {
                   output_filename: assets
                   class_name: Assets
                   auto_detection: true
+                  # Options: robust (default), camel_case (legacy)
+                  style: robust
                   path_ignore: []
             """.trimIndent()
 

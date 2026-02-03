@@ -117,20 +117,25 @@ String path = Assets.images.logo.path;
 
 ```yaml
 flutter_assets_generator:
-  output_dir: lib/generated/
+  output_dir: generated/
   output_filename: assets
   class_name: Assets
   auto_detection: true
-  style: robust # 可选值: robust (默认), camel_case (旧版兼容)
+  # 生成风格: robust (默认), camel_case (旧版兼容)
+  # robust: 分层级风格 (Assets.images.logo)
+  # camel_case: 扁平风格 (Assets.imagesLogo)
+  style: robust
   path_ignore: []
 ```
 
 #### 2. 手动配置（可选）
 
+您也可以手动在 `pubspec.yaml` 中添加 `flutter_assets_generator` 进行自定义：
+
 ```yaml
 flutter_assets_generator:
   # 生成文件的输出目录。默认: lib/generated
-  output_dir: lib/generated/
+  output_dir: generated/
   # 生成文件的文件名 (无后缀)。默认: assets
   output_filename: assets
   # 生成的根类名。默认: Assets
