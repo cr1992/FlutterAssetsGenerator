@@ -1,6 +1,9 @@
 # Flutter Assets Generator v3.0.0 测试用例 (Test Cases)
 
-本文档旨在提供一套完整的测试流程，用于验证 v3.0.0 版本的功能正确性、稳定性和兼容性。
+> **文档版本**: `f7b031b` - 补充日志 (2026-02-04)  
+> **最后更新**: 2026-02-04
+
+本文档旨在提供一套完整的测试流程,用于验证 v3.0.0 版本的功能正确性、稳定性和兼容性。
 
 ## 1. 环境准备 (Setup)
 *   **IDE**: Android Studio 或 IntelliJ IDEA (兼容 2021.3+)
@@ -53,11 +56,16 @@
 ### TC-05: 自动依赖注入 (Dependency Injection)
 *   **步骤**: 
     1.  在 `assets/` 下放入一个 `.svg` 文件。
-    2.  打开 `pubspec.yaml`，确认 Dependencies 中**没有** `flutter_svg`。
+    2.  打开 `pubspec.yaml`,确认 Dependencies 中**没有** `flutter_svg`。
     3.  保存 `pubspec.yaml` 或触发生成。
+    4.  打开 IDE 日志 (Help → Show Log in Finder/Explorer),搜索 `[FlutterAssetsGenerator #DependencyHelper]`。
 *   **预期**: 
-    - 插件检测到 SVG 文件，自动在 `pubspec.yaml` 中添加 `flutter_svg` 依赖。
-    - 生成的代码中，该 SVG 字段支持 `.svg()` 方法。
+    - 插件检测到 SVG 文件,自动在 `pubspec.yaml` 中添加 `flutter_svg` 依赖。
+    - 生成的代码中,该 SVG 字段支持 `.svg()` 方法。
+    - **日志验证**: 日志中应包含以下信息:
+        - `Adding dependencies to .../pubspec.yaml: {flutter_svg=^2.0.0}`
+        - `Requesting pub get for .../pubspec.yaml`
+        - `Executing via Flutter Plugin API` 或 `Executing via CLI fallback`
 *   **同理测试**: `.json` / `.lottie` 文件触发 `lottie` 包的自动注入。
 
 ## 3. 配置兼容性测试 (Configuration Compatibility)

@@ -1,5 +1,8 @@
 # Flutter Assets Generator 3.0.0 技术方案详述
 
+> **文档版本**: `f7b031b` - 补充日志 (2026-02-04)  
+> **最后更新**: 2026-02-04
+
 本文档详细描述了 Flutter Assets Generator 插件 (v3.0.0) 的技术架构、核心流程与关键实现细节。
 
 ## 1. 架构概览 (Architecture Overview)
@@ -202,9 +205,18 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
 
 ## 4. 设计细节 (Design Details)
 
-### 4.1 自动依赖管理
-插件不只是生成代码，还是一个"智能助手"。在扫描资源树时，如果发现 `.svg` 或 `.json` (Lottie) 文件，会置位标志 `hasSvg` / `hasLottie`。
-在生成结束后，如果 `auto_detection` 开启，插件会检查 `pubspec.yaml` 的 `dependencies` 节点。如果缺少 `flutter_svg` 或 `lottie`，会自动插入依赖。
+### 4.1 自动依赖管理 (DependencyHelper)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/DependencyHelper.kt`
+
+插件不只是生成代码,还是一个"智能助手"。在扫描资源树时,如果发现 `.svg` 或 `.json` (Lottie) 文件,会置位标志 `hasSvg` / `hasLottie`。
+在生成结束后,如果 `auto_detection` 开启,插件会检查 `pubspec.yaml` 的 `dependencies` 节点。如果缺少 `flutter_svg` 或 `lottie`,会自动插入依赖。
+
+**关键特性**:
+*   **统一日志系统**: 所有依赖管理操作均通过 `Logger` 输出详细日志,标签为 `[FlutterAssetsGenerator #DependencyHelper]`,便于问题追踪。
+*   **双重执行机制**: 
+    *   **方案A (优先)**: 使用 Flutter 插件原生 API `FlutterSdk.startPubGet()`,提供原生 UI 进度提示。
+    *   **方案B (降级)**: 当 Flutter SDK 未配置或原生方法不可用时,降级到 CLI 执行 `flutter pub get`,确保功能可用性。
+*   **文档同步保存**: 在修改 `pubspec.yaml` 后,强制调用 `FileDocumentManager.saveDocument()`,确保磁盘文件与内存一致后再执行 `pub get`。
 
 ### 4.2 智能生成风格 (Robust Style)
 v3.0.0 默认采用 Robust 风格，生成的类结构如下：
