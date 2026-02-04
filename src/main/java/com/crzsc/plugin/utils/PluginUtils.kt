@@ -1,7 +1,6 @@
 package com.crzsc.plugin.utils
 
-import com.intellij.notification.NotificationDisplayType
-import com.intellij.notification.NotificationGroup
+import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
@@ -12,16 +11,16 @@ import com.intellij.psi.PsiElement
 
 object PluginUtils {
 
-    // 单例通知组,避免重复注册
-    private val NOTIFICATION_GROUP =
-            NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
+    // 从 NotificationGroupManager 获取通知组
+    private fun getNotificationGroup() =
+            NotificationGroupManager.getInstance().getNotificationGroup("FlutterAssetsGenerator")
 
     @JvmStatic
     fun showNotify(message: String?) {
         if (message.isNullOrEmpty()) return
         ApplicationManager.getApplication().invokeLater {
             val notification =
-                    NOTIFICATION_GROUP.createNotification(message, NotificationType.INFORMATION)
+                    getNotificationGroup().createNotification(message, NotificationType.INFORMATION)
             Notifications.Bus.notify(notification)
         }
     }
@@ -31,7 +30,7 @@ object PluginUtils {
         if (message.isNullOrEmpty()) return
         ApplicationManager.getApplication().invokeLater {
             val notification =
-                    NOTIFICATION_GROUP.createNotification(message, NotificationType.ERROR)
+                    getNotificationGroup().createNotification(message, NotificationType.ERROR)
             Notifications.Bus.notify(notification)
         }
     }

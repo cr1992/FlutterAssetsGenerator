@@ -18,6 +18,9 @@
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
 
+        <!-- Notification Group -->
+        <notificationGroup id="FlutterAssetsGenerator" displayType="BALLOON"/>
+
         <!--        行标记-->
         <codeInsight.lineMarkerProvider language="Dart"
                                         implementationClass="com.crzsc.plugin.provider.AssetsLineMarkerProvider"/>
@@ -47,7 +50,7 @@
             </action>
         </group>
         
-        <!-- 右键菜单：配置路径到 pubspec.yaml -->
+        <!-- 右键菜单:配置路径到 pubspec.yaml -->
         <action id="com.crzsc.plugin.actions.GenerateDirAction" class="com.crzsc.plugin.actions.GenerateDirAction"
                 text="Flutter: Configuring Paths" description="Configuring Paths in pubspec.yaml"
                 icon="AllIcons.Actions.BuildLoadChanges">
