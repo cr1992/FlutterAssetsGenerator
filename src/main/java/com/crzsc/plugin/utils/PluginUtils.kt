@@ -14,22 +14,24 @@ object PluginUtils {
 
     // 单例通知组,避免重复注册
     private val NOTIFICATION_GROUP =
-        NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
+            NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
 
     @JvmStatic
     fun showNotify(message: String?) {
+        if (message.isNullOrEmpty()) return
         ApplicationManager.getApplication().invokeLater {
             val notification =
-                NOTIFICATION_GROUP.createNotification(message!!, NotificationType.INFORMATION)
+                    NOTIFICATION_GROUP.createNotification(message, NotificationType.INFORMATION)
             Notifications.Bus.notify(notification)
         }
     }
 
     @JvmStatic
     fun showError(message: String?) {
+        if (message.isNullOrEmpty()) return
         ApplicationManager.getApplication().invokeLater {
             val notification =
-                NOTIFICATION_GROUP.createNotification(message!!, NotificationType.ERROR)
+                    NOTIFICATION_GROUP.createNotification(message, NotificationType.ERROR)
             Notifications.Bus.notify(notification)
         }
     }
@@ -56,7 +58,7 @@ object PluginUtils {
     /** 新窗口打开文件 */
     fun PsiElement.openFile(vFile: VirtualFile) {
         FileEditorManager.getInstance(project)
-            .openTextEditor(OpenFileDescriptor(project, vFile), true)
+                .openTextEditor(OpenFileDescriptor(project, vFile), true)
     }
 
     fun String.lowerCaseFirst(): String {
