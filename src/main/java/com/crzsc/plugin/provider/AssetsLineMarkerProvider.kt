@@ -16,45 +16,43 @@ import com.intellij.ui.scale.ScaleContext
 import com.intellij.util.IconUtil
 import com.intellij.util.SVGLoader
 import io.flutter.utils.FlutterModuleUtils
-import org.jetbrains.kotlin.idea.util.module
 import javax.swing.Icon
 import javax.swing.ImageIcon
+import org.jetbrains.kotlin.idea.util.module
 
-
-/**
- * Svgs.dart显示图标在路径左侧
- */
+/** Svgs.dart显示图标在路径左侧 */
 class AssetsLineMarkerProvider : LineMarkerProvider {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         val module = element.module
         if (!FlutterModuleUtils.isFlutterModule(module)) return null
         val elementType = (element as? LeafPsiElement?)?.elementType?.toString()
-        if (elementType == "REGULAR_STRING_PART"
-        ) {
+        if (elementType == "REGULAR_STRING_PART") {
             // 这里会被多次调用 尽量减少调用次数
             var assetName: String? = null
-            var leadingWithPackageName: String? = null;
+            var leadingWithPackageName: String? = null
             if (module != null) {
                 FileHelperNew.getPubSpecConfig(module)?.let {
                     assetName = FileHelperNew.getGeneratedFileName(it)
                     leadingWithPackageName = it.getLeadingWithPackageNameIfChecked()
                 }
             }
-            val filenameCorrect = element.containingFile.name.equals(
-                assetName, true
-            ) || element.containingFile.name.equals(
-                "assets.dart", true
-            )
+            // 检查当前文件名是否匹配配置的生成文件名
+            // getGeneratedFileName 返回不带扩展名的文件名,需要添加 .dart 后缀
+            val filenameCorrect =
+                assetName != null && element.containingFile.name.equals("$assetName.dart", true)
             if (filenameCorrect) {
-//                println("filenameCorrect showMakeByType : $element")
+                //                println("filenameCorrect showMakeByType : $element")
                 return showMakeByType(element, leadingWithPackageName)
             }
         }
         return null
     }
 
-    private fun showMakeByType(element: PsiElement, leadingWithPackageName: String?): LineMarkerInfo<*>? {
+    private fun showMakeByType(
+        element: PsiElement,
+        leadingWithPackageName: String?
+    ): LineMarkerInfo<*>? {
         val assetsPath = element.text
         val anchor = PsiTreeUtil.getDeepestFirst(element)
         // 先用默认的path找文件
@@ -75,7 +73,7 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
             }
             vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
         }
-//        println("showMakeByType assetsPath $assetsPath")
+        //        println("showMakeByType assetsPath $assetsPath")
         if (vFile != null) {
             return when {
                 assetsPath.isSvgExtension -> showSvgMark(element, anchor, vFile)
@@ -85,9 +83,9 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         return null
     }
 
-
     private fun showSvgMark(
-        element: PsiElement, anchor: PsiElement,
+        element: PsiElement,
+        anchor: PsiElement,
         vFile: VirtualFile
     ): LineMarkerInfo<*> {
         val icon: Icon =
@@ -100,28 +98,36 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                     16.0
                 )
             )
-        return LineMarkerInfo(anchor, anchor.textRange, icon, {
-            //悬停，会多次调用
-            return@LineMarkerInfo ""
-        }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT)
-
+        return LineMarkerInfo(
+            anchor,
+            anchor.textRange,
+            icon,
+            {
+                // 悬停，会多次调用
+                return@LineMarkerInfo ""
+            },
+            { _, _ -> element.openFile(vFile) },
+            GutterIconRenderer.Alignment.LEFT
+        )
     }
 
-
     private fun showIconMark(
-        element: PsiElement, anchor: PsiElement,
+        element: PsiElement,
+        anchor: PsiElement,
         vFile: VirtualFile
     ): LineMarkerInfo<*> {
         val icon = IconUtil.getIcon(vFile, Iconable.ICON_FLAG_VISIBILITY, element.project)
-        //其他文件展示文件格式
+        // 其他文件展示文件格式
         return LineMarkerInfo(
-            anchor, anchor.textRange,
-            icon, {
-                //悬停，会多次调用
+            anchor,
+            anchor.textRange,
+            icon,
+            {
+                // 悬停，会多次调用
                 return@LineMarkerInfo ""
-            }, { _, _ -> element.openFile(vFile) }, GutterIconRenderer.Alignment.LEFT
+            },
+            { _, _ -> element.openFile(vFile) },
+            GutterIconRenderer.Alignment.LEFT
         )
-
     }
-
 }
