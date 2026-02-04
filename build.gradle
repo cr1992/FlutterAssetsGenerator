@@ -81,11 +81,23 @@ patchPluginXml {
     sinceBuild = properties("pluginSinceBuild")
     untilBuild = properties("pluginUntilBuild")
     
-    // Convert README to HTML using CommonMark
+    // Extract English section from README and convert to HTML using CommonMark
+    // This follows JetBrains recommended practice for plugin descriptions
     pluginDescription = provider {
+        def readmeContent = project.file("README.md").text
+        def lines = readmeContent.readLines()
+        
+        // Extract English section (from line 6 "## English" to line 90 "---")
+        // This ensures description starts with Latin characters as required by marketplace
+        def startIndex = 5  // Line 6: "## English" (0-indexed)
+        def endIndex = 89   // Line 90: "---" separator (0-indexed, exclusive)
+        
+        def englishSection = lines.subList(startIndex, endIndex).join('\n')
+        
+        // Convert to HTML using CommonMark
         def parser = Parser.builder().build()
         def renderer = HtmlRenderer.builder().build()
-        def document = parser.parse(project.file("README.md").text)
+        def document = parser.parse(englishSection)
         renderer.render(document)
     }
     
