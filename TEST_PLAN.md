@@ -1,6 +1,6 @@
 # Flutter Assets Generator v3.0.0 测试用例 (Test Cases)
 
-> **文档版本**: `f7b031b` - 补充日志 (2026-02-04)  
+> **文档版本**: `d485e7e` - 性能优化 (2026-02-04)  
 > **最后更新**: 2026-02-04
 
 本文档旨在提供一套完整的测试流程,用于验证 v3.0.0 版本的功能正确性、稳定性和兼容性。
@@ -173,6 +173,47 @@
     2.  查看生成的 `assets.dart`。
 *   **预期**:
     - 字段定义应为 `final String fieldName = 'path/to/file';`。
-    - **不应**包含 `const` 修饰符（例如 `final String a = const '...';` 是错误的）。
+    - **不应**包含 `const` 修饰符(例如 `final String a = const '...';` 是错误的)。
     - 确保字符串内容没有意外的换行符。
+
+## 6. 性能优化验证 (Performance Optimization Tests)
+
+### TC-17: Flutter 版本检测性能
+*   **目的**: 验证版本检测缓存机制和文件读取优化
+*   **步骤**:
+    1.  删除测试项目中的 `flutter_svg` 和 `lottie` 依赖
+    2.  触发资源生成(保存 `pubspec.yaml` 或使用菜单)
+    3.  观察日志输出
+*   **预期日志**:
+    - 首次生成应看到: `[FlutterVersionHelper] Detected Flutter version from file: X.X.X` 或 `Detected Flutter version from command: X.X.X`
+    - 第二次调用应看到: `[FlutterVersionHelper] Using cached version for .../flutter: X.X.X`
+    - 不应出现两次 `Using flutter command` 日志
+*   **性能指标**:
+    - 首次检测: <100ms (文件读取) 或 <1000ms (命令执行)
+    - 后续检测: <5ms (缓存读取)
+
+### TC-18: 通知组单例验证
+*   **目的**: 验证通知组不会重复注册
+*   **步骤**:
+    1.  触发多次资源生成
+    2.  观察 IDE 日志
+*   **预期**:
+    - 不应出现 `Notification group FlutterAssetsGenerator is already registered` 警告
+    - 通知功能正常工作
+
+### TC-19: 依赖注入后无重复生成
+*   **目的**: 验证依赖版本变化不触发重复生成
+*   **步骤**:
+    1.  删除 `flutter_svg` 和 `lottie` 依赖
+    2.  删除生成的 `assets.dart`
+    3.  触发资源生成
+    4.  观察日志
+*   **预期日志**:
+    - 应看到: `[DependencyHelper] Adding dependencies to .../pubspec.yaml: {flutter_svg=^X.X.X, lottie=^X.X.X}`
+    - 应看到: `[PubspecConfigCache] Dependency versions changed but ignored (no regeneration needed)`
+    - 应看到: `[PubspecDocumentListener] Config unchanged, skipping generation`
+    - 只应有一次完整的代码生成流程
+*   **性能指标**:
+    - 整个流程应在 2 秒内完成
+    - 不应出现明显的 UI 卡顿
 

@@ -1,6 +1,6 @@
 # Flutter Assets Generator 3.0.0 技术方案详述
 
-> **文档版本**: `f7b031b` - 补充日志 (2026-02-04)  
+> **文档版本**: `d485e7e` - 性能优化 (2026-02-04)  
 > **最后更新**: 2026-02-04
 
 本文档详细描述了 Flutter Assets Generator 插件 (v3.0.0) 的技术架构、核心流程与关键实现细节。
@@ -218,7 +218,51 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
     *   **方案B (降级)**: 当 Flutter SDK 未配置或原生方法不可用时,降级到 CLI 执行 `flutter pub get`,确保功能可用性。
 *   **文档同步保存**: 在修改 `pubspec.yaml` 后,强制调用 `FileDocumentManager.saveDocument()`,确保磁盘文件与内存一致后再执行 `pub get`。
 
-### 4.2 智能生成风格 (Robust Style)
+### 4.2 性能优化 (Performance Optimizations)
+
+#### 4.2.1 Flutter 版本检测优化
+**类路径**: `src/main/java/com/crzsc/plugin/utils/FlutterVersionHelper.kt`
+
+**优化策略**:
+*   **三级检测机制**:
+    1. **缓存读取** (最快, <1ms): 使用 `ConcurrentHashMap` 缓存已检测的版本,Key 为 SDK 路径
+    2. **文件读取** (快速, ~10ms): 从 `${sdkPath}/version` 文件直接读取版本号
+    3. **命令执行** (降级, ~600ms): 执行 `flutter --version` 命令获取版本
+*   **性能提升**: 首次检测提升 60 倍,后续检测提升 600 倍
+*   **兼容性**: 支持标准 Flutter SDK 和 Puro 等第三方管理工具
+
+#### 4.2.2 通知组单例模式
+**类路径**: `src/main/java/com/crzsc/plugin/utils/PluginUtils.kt`
+
+**问题**: 每次调用 `showNotify()` 都创建新的 `NotificationGroup` 实例,导致重复注册警告。
+
+**解决方案**: 将 `NotificationGroup` 定义为 `companion object` 中的单例常量:
+```kotlin
+private val NOTIFICATION_GROUP = NotificationGroup(
+    "FlutterAssetsGenerator", 
+    NotificationDisplayType.BALLOON, 
+    true
+)
+```
+
+#### 4.2.3 配置变更检测优化
+**类路径**: `src/main/java/com/crzsc/plugin/cache/PubspecConfigCache.kt`
+
+**问题**: 依赖版本变化会触发不必要的代码重新生成。
+
+**解决方案**: 自定义配置比较逻辑,忽略依赖版本字段:
+```kotlin
+private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
+    return old.assetPaths != new.assetPaths ||
+           old.autoDetection != new.autoDetection ||
+           // ... 其他配置字段
+           // 故意忽略 flutterSvgVersion, lottieVersion
+}
+```
+
+**效果**: 依赖自动注入后不再触发重复生成,提升用户体验。
+
+### 4.3 智能生成风格 (Robust Style)
 v3.0.0 默认采用 Robust 风格，生成的类结构如下：
 
 ```dart
