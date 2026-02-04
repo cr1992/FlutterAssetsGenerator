@@ -68,7 +68,7 @@ class FileGenerator(private val project: Project) {
         // 自动添加依赖 (如果开启了 auto_detection)
         if (FileHelperNew.isAutoDetectionEnable(config)) {
             // 检测 Flutter 版本
-            val flutterVersion = FlutterVersionHelper.getFlutterVersion(pubspecFile)
+            val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
 
             val depsToAdd = mutableMapOf<String, String>()
 
@@ -102,7 +102,7 @@ class FileGenerator(private val project: Project) {
 
         // 3. 生成代码 (Generate Code)
         // 检测 Flutter 版本用于生成兼容的模板
-        val flutterVersion = FlutterVersionHelper.getFlutterVersion(pubspecFile)
+        val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
         // 即使没有依赖，也可能生成 path 常量，但不会生成 .svg()/.lottie() 方法
         val content =
             DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)

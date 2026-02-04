@@ -12,27 +12,29 @@ import com.intellij.psi.PsiElement
 
 object PluginUtils {
 
+    // 单例通知组,避免重复注册
+    private val NOTIFICATION_GROUP =
+        NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
+
     @JvmStatic
     fun showNotify(message: String?) {
-        val notificationGroup = NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
         ApplicationManager.getApplication().invokeLater {
-            val notification = notificationGroup.createNotification(message!!, NotificationType.INFORMATION)
+            val notification =
+                NOTIFICATION_GROUP.createNotification(message!!, NotificationType.INFORMATION)
             Notifications.Bus.notify(notification)
         }
     }
 
     @JvmStatic
     fun showError(message: String?) {
-        val notificationGroup = NotificationGroup("FlutterAssetsGenerator", NotificationDisplayType.BALLOON, true)
         ApplicationManager.getApplication().invokeLater {
-            val notification = notificationGroup.createNotification(message!!, NotificationType.ERROR)
+            val notification =
+                NOTIFICATION_GROUP.createNotification(message!!, NotificationType.ERROR)
             Notifications.Bus.notify(notification)
         }
     }
 
-    /**
-     * 转换小写驼峰式
-     */
+    /** 转换小写驼峰式 */
     fun String.toLowCamelCase(regex: Regex): String {
         return if (this.isEmpty()) {
             this
@@ -51,9 +53,7 @@ object PluginUtils {
         }
     }
 
-    /**
-     * 新窗口打开文件
-     */
+    /** 新窗口打开文件 */
     fun PsiElement.openFile(vFile: VirtualFile) {
         FileEditorManager.getInstance(project)
             .openTextEditor(OpenFileDescriptor(project, vFile), true)
@@ -67,9 +67,7 @@ object PluginUtils {
         }
     }
 
-    /**
-     * 首字母大写
-     */
+    /** 首字母大写 */
     fun String.upperCaseFirst(): String {
         return if (this.isEmpty()) {
             this
