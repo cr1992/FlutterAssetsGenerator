@@ -22,7 +22,7 @@ import org.jetbrains.yaml.psi.YAMLSequence
 class FileGenerator(private val project: Project) {
     companion object {
         private val LOG =
-                com.intellij.openapi.diagnostic.Logger.getInstance(FileGenerator::class.java)
+            com.intellij.openapi.diagnostic.Logger.getInstance(FileGenerator::class.java)
     }
 
     /** 为所有模块重新生成 */
@@ -72,15 +72,27 @@ class FileGenerator(private val project: Project) {
 
             val depsToAdd = mutableMapOf<String, String>()
 
-            if (hasSvg && !hasSvgDep) {
-                val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
-                depsToAdd["flutter_svg"] = svgVersion
-                hasSvgDep = true
+            if (hasSvg) {
+                if (!hasSvgDep) {
+                    val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
+                    depsToAdd["flutter_svg"] = svgVersion
+                    hasSvgDep = true
+                } else {
+                    LOG.info(
+                        "[FlutterAssetsGenerator #FileGenerator] [generateWithConfig] flutter_svg dependency already exists, skipping addition"
+                    )
+                }
             }
-            if (hasLottie && !hasLottieDep) {
-                val lottieVersion = DependencyVersionSelector.getLottieVersion(flutterVersion)
-                depsToAdd["lottie"] = lottieVersion
-                hasLottieDep = true
+            if (hasLottie) {
+                if (!hasLottieDep) {
+                    val lottieVersion = DependencyVersionSelector.getLottieVersion(flutterVersion)
+                    depsToAdd["lottie"] = lottieVersion
+                    hasLottieDep = true
+                } else {
+                    LOG.info(
+                        "[FlutterAssetsGenerator #FileGenerator] [generateWithConfig] lottie dependency already exists, skipping addition"
+                    )
+                }
             }
 
             if (depsToAdd.isNotEmpty()) {
@@ -93,8 +105,8 @@ class FileGenerator(private val project: Project) {
         val flutterVersion = FlutterVersionHelper.getFlutterVersion(pubspecFile)
         // 即使没有依赖，也可能生成 path 常量，但不会生成 .svg()/.lottie() 方法
         val content =
-                DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
-                        .generate()
+            DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
+                .generate()
 
         // 4. 写入文件
         val psiManager = PsiManager.getInstance(project)
@@ -163,39 +175,39 @@ class FileGenerator(private val project: Project) {
             val yamlFile = module.pubRoot.pubspec.toPsiFile(project) as? YAMLFile
             yamlFile?.let {
                 val psiElement =
-                        yamlFile.node
-                                .getChildren(null)
-                                .firstOrNull()
-                                ?.psi
-                                ?.children
-                                ?.firstOrNull()
-                                ?.children
-                                ?.firstOrNull { it.text.startsWith("flutter:") }
+                    yamlFile.node
+                        .getChildren(null)
+                        .firstOrNull()
+                        ?.psi
+                        ?.children
+                        ?.firstOrNull()
+                        ?.children
+                        ?.firstOrNull { it.text.startsWith("flutter:") }
                 if (psiElement != null) {
                     val yamlMapping = psiElement.children.first() as YAMLMapping
                     WriteCommandAction.runWriteCommandAction(project) {
                         var assetsValue =
-                                yamlMapping.keyValues.firstOrNull { it.keyText == "assets" }
+                            yamlMapping.keyValues.firstOrNull { it.keyText == "assets" }
                         val stringBuilder = StringBuilder()
                         moduleAssets?.forEach { stringBuilder.append("    - $it\n") }
                         paths.forEach { stringBuilder.append("    - $it\n") }
                         stringBuilder.removeSuffix("\n")
                         if (assetsValue == null) {
                             assetsValue =
-                                    YAMLElementGenerator.getInstance(project)
-                                            .createYamlKeyValue("assets", stringBuilder.toString())
+                                YAMLElementGenerator.getInstance(project)
+                                    .createYamlKeyValue("assets", stringBuilder.toString())
                             yamlMapping.putKeyValue(assetsValue)
                         } else {
                             val yamlValue =
-                                    PsiTreeUtil.collectElementsOfType(
-                                                    YAMLElementGenerator.getInstance(project)
-                                                            .createDummyYamlWithText(
-                                                                    stringBuilder.toString()
-                                                            ),
-                                                    YAMLSequence::class.java
-                                            )
-                                            .iterator()
-                                            .next()
+                                PsiTreeUtil.collectElementsOfType(
+                                    YAMLElementGenerator.getInstance(project)
+                                        .createDummyYamlWithText(
+                                            stringBuilder.toString()
+                                        ),
+                                    YAMLSequence::class.java
+                                )
+                                    .iterator()
+                                    .next()
                             assetsValue.setValue(yamlValue)
                         }
                     }
