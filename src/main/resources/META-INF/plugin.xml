@@ -4,6 +4,10 @@
     <icon src="/META-INF/pluginIcon.svg"/>
     <vendor email="cr1992@qq.com" url="https://github.com/cr1992/FlutterAssetsGenerator">Ray&amp;Zsc</vendor>
 
+    <description><![CDATA[
+A powerful Android Studio / IntelliJ plugin that automatically generates type-safe, hierarchical asset index for your Flutter projects. Supports SVG, Lottie, and automatic dependency management with smart widget integration.
+    ]]></description>
+
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
     <depends>com.intellij.modules.json</depends>
@@ -24,6 +28,10 @@
         <!--        行标记-->
         <codeInsight.lineMarkerProvider language="Dart"
                                         implementationClass="com.crzsc.plugin.provider.AssetsLineMarkerProvider"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK2="true"/>
     </extensions>
 
     <applicationListeners>
