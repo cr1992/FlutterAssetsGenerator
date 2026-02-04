@@ -24,6 +24,22 @@
 - **Refined Naming**: Unified special character handling for asset filenames across all modes.
   - **命名优化**: 统一了所有模式下资源文件名的特殊字符处理逻辑，确保生成的变量名始终合法。
 
+### Fixed / 修复
+- **Notification Group**: Fixed duplicate `NotificationGroup` registration warning by using singleton pattern.
+  - **通知组**: 使用单例模式修复了重复注册警告。
+- **Redundant Generation**: Prevented unnecessary code regeneration after dependency injection by ignoring dependency version changes in config comparison.
+  - **重复生成**: 通过在配置比较中忽略依赖版本变化,防止依赖注入后的不必要代码重新生成。
+
+### Improved / 性能优化
+- **Flutter Version Detection**: Implemented 3-tier caching mechanism (Cache > File > Command) for version detection.
+  - **Flutter 版本检测**: 实施三级缓存机制 (缓存 > 文件 > 命令),大幅提升检测速度。
+  - Performance: 60x faster on first call (~10ms vs ~600ms), 600x faster on subsequent calls (<1ms vs ~600ms)
+  - 性能提升: 首次调用快 60 倍 (~10ms vs ~600ms),后续调用快 600 倍 (<1ms vs ~600ms)
+  - Eliminated Flutter command lock conflicts
+  - 消除了 Flutter 命令锁冲突
+  - Supports Puro and other third-party Flutter management tools
+  - 支持 Puro 等第三方 Flutter 管理工具
+
 ## [2.5.0]
 ### Fixed
 - Bug fix.
