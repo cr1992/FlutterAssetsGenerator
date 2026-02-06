@@ -291,6 +291,23 @@ private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
 
 **解决方案**: 将 `NotificationGroup` 定义为 `companion object` 中的单例常量。
 
+#### 4.2.6 多模块与嵌套项目支持 (Nested Module Support)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/FileGenerator.kt`
+
+**问题**: 在 Monorepo 或嵌套结构（如 `example` 目录）中，插件可能无法正确识别当前的 Flutter 模块。
+
+**解决方案**:
+*   遍历项目中所有的 `pubspec.yaml` 建立模块索引。
+*   根据文件路径的前缀匹配 (`file.path.startsWith(modulePath)`) 自动定位所属模块。
+*   **最长路径优先原则**: 当路径命中多个模块时（如 `root` 和 `root/example`），优先匹配路径更长的即更深层的子模块。
+
+#### 4.2.7 严格资源扫描 (Strict Asset Scanning)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/AssetTree.kt`
+
+**策略**: 
+*   **所见即所得**: 仅为 `pubspec.yaml` 中显式声明的 `assets` 目录或文件生成索引。
+*   **非递归扫描**: 默认不递归扫描子目录，除非子目录也在配置中被显式包含。这避免了将未配置的测试资源或临时文件意外生成到索引中。
+
 ### 4.3 智能生成风格 (Robust Style)
 v3.0.0 默认采用 Robust 风格，生成的类结构如下：
 

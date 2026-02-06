@@ -3,6 +3,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 ## Core Features
 
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
+- **Multi-Module Support**: Seamlessly supports nested Flutter modules and monorepos (e.g. `example/` or `packages/`).
 - **Legacy Compatibility**: Supports `style: camel_case` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
 - **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
 - **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects.
