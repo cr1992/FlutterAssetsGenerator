@@ -6,17 +6,16 @@ import com.crzsc.plugin.utils.isSvgExtension
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Iconable
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.ui.scale.ScaleContext
 import com.intellij.util.IconUtil
-import com.intellij.util.SVGLoader
+import java.io.File
 import javax.swing.Icon
-import javax.swing.ImageIcon
 
 /** Svgs.dart显示图标在路径左侧 */
 class AssetsLineMarkerProvider : LineMarkerProvider {
@@ -90,17 +89,22 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         element: PsiElement,
         anchor: PsiElement,
         vFile: VirtualFile
-    ): LineMarkerInfo<*> {
-        val icon: Icon =
-            ImageIcon(
-                SVGLoader.load(
-                    null,
-                    vFile.inputStream,
-                    ScaleContext.createIdentity(),
-                    16.0,
-                    16.0
-                )
-            )
+    ): LineMarkerInfo<*>? {
+        val icon: Icon? =
+            try {
+                val url = File(vFile.path).toURI().toURL()
+                val baseIcon = IconLoader.findIcon(url)
+                if (baseIcon != null) {
+                    val scale = 16.0f / baseIcon.iconWidth
+                    IconUtil.scale(baseIcon, null, scale)
+                } else {
+                    null
+                }
+            } catch (_: Exception) {
+                null
+            }
+        if (icon == null) return null // Or some default icon
+
         return LineMarkerInfo(
             anchor,
             anchor.textRange,
