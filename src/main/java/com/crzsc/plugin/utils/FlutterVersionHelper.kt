@@ -3,6 +3,7 @@ package com.crzsc.plugin.utils
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import io.flutter.sdk.FlutterSdk
 import java.io.File
 import java.io.FileInputStream
@@ -22,6 +23,7 @@ object FlutterVersionHelper {
      * @param pubspecFile pubspec.yaml 文件
      * @return Flutter 版本,如果无法解析则返回 null
      */
+    @RequiresBackgroundThread
     fun getFlutterVersion(project: Project, pubspecFile: VirtualFile): SemanticVersion? {
         // 优先尝试从 Flutter SDK 获取实际版本
         getFlutterVersionFromSdk(project)?.let {
@@ -93,6 +95,7 @@ object FlutterVersionHelper {
     }
 
     /** 通过执行 flutter --version 命令获取 Flutter SDK 版本 */
+    @RequiresBackgroundThread
     private fun getFlutterVersionFromCommand(project: Project, sdkPath: String): SemanticVersion? {
         try {
             val flutterCommand = "$sdkPath/bin/flutter"

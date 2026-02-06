@@ -3,8 +3,12 @@ package com.crzsc.plugin.utils
 import com.crzsc.plugin.utils.PluginUtils.showNotify
 import com.intellij.codeInsight.actions.ReformatCodeProcessor
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -21,106 +25,121 @@ import org.jetbrains.yaml.psi.YAMLSequence
 
 class FileGenerator(private val project: Project) {
     companion object {
-        private val LOG =
-            Logger.getInstance(FileGenerator::class.java)
+        private val LOG = Logger.getInstance(FileGenerator::class.java)
     }
 
     /** 为所有模块重新生成 */
+    /** 为所有模块重新生成 */
     fun generateAll() {
-        WriteCommandAction.runWriteCommandAction(project) {
-            val assets = FileHelperNew.getAssets(project) as MutableList
-            assets.removeAll {
-                println("module : ${it.module} assets ${it.assetVFiles}")
-                it.assetVFiles.isEmpty()
-            }
-            if (assets.isEmpty()) {
-                showNotify("Please configure your assets path in pubspec.yaml")
-                return@runWriteCommandAction
-            }
-            for (config in assets) {
-                generateWithConfig(config)
-            }
+        val assets = FileHelperNew.getAssets(project) as MutableList
+        assets.removeAll {
+            println("module : ${it.module} assets ${it.assetVFiles}")
+            it.assetVFiles.isEmpty()
+        }
+        if (assets.isEmpty()) {
+            showNotify("Please configure your assets path in pubspec.yaml")
+            return
+        }
+        for (config in assets) {
+            generateOne(config)
         }
     }
 
-    /** 生成单个模块文件 */
+    /** 生成单个模块文件 (异步) */
     fun generateOne(config: ModulePubSpecConfig) {
-        WriteCommandAction.runWriteCommandAction(project) { generateWithConfig(config) }
+        ProgressManager.getInstance()
+            .run(
+                object :
+                    Task.Backgroundable(
+                        project,
+                        "Generating Assets for ${config.module.name}",
+                        false
+                    ) {
+                    override fun run(indicator: ProgressIndicator) {
+                        val data = prepareData(config)
+
+                        // Switch to EDT for writing
+                        ApplicationManager.getApplication().invokeLater {
+                            if (!project.isDisposed) {
+                                WriteCommandAction.runWriteCommandAction(project) {
+                                    performWrite(config, data)
+                                }
+                            }
+                        }
+                    }
+                }
+            )
     }
 
-    private fun generateWithConfig(config: ModulePubSpecConfig) {
-        val ignorePath = FileHelperNew.getPathIgnore(config)
-        val moduleRootPath = config.pubRoot.path
+    private data class GenerationData(
+        val content: String,
+        val depsToAdd: Map<String, String>,
+        val flutterVersion: SemanticVersion?
+    )
 
-        // 1. 构建资源树 (Build Asset Tree)
-        // 根据 pubspec.yaml 配置的 assets 路径，递归扫描构建资源树
-        val rootNode = AssetTreeBuilder.build(config.assetVFiles, moduleRootPath, ignorePath)
+    /** 准备数据 (后台线程执行) */
+    private fun prepareData(config: ModulePubSpecConfig): GenerationData {
+        return ReadAction.compute<GenerationData, RuntimeException> {
+            val ignorePath = FileHelperNew.getPathIgnore(config)
+            val moduleRootPath = config.pubRoot.path
 
-        // 2. 依赖检查与自动注入 (Dependency Check & Injection)
-        // 扫描资源树，判断是否包含 SVG 或 Lottie 文件
-        val hasSvg = traverseFindType(rootNode, MediaType.SVG)
-        val hasLottie = traverseFindType(rootNode, MediaType.LOTTIE)
+            // 1. 构建资源树 (Build Asset Tree)
+            val rootNode = AssetTreeBuilder.build(config.assetVFiles, moduleRootPath, ignorePath)
 
-        val pubspecFile = config.pubRoot.pubspec
-        var hasSvgDep = DependencyHelper.hasDependency(project, pubspecFile, "flutter_svg")
-        var hasLottieDep = DependencyHelper.hasDependency(project, pubspecFile, "lottie")
+            // 2. 依赖检查
+            val hasSvg = traverseFindType(rootNode, MediaType.SVG)
+            val hasLottie = traverseFindType(rootNode, MediaType.LOTTIE)
 
-        // 自动添加依赖 (如果开启了 auto_detection)
-        if (FileHelperNew.isAutoDetectionEnable(config)) {
-            // 检测 Flutter 版本
+            val pubspecFile = config.pubRoot.pubspec
+            var hasSvgDep = DependencyHelper.hasDependency(project, pubspecFile, "flutter_svg")
+            var hasLottieDep = DependencyHelper.hasDependency(project, pubspecFile, "lottie")
+
+            // 检测 Flutter 版本 (IO / Process)
             val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
 
             val depsToAdd = mutableMapOf<String, String>()
 
-            if (hasSvg) {
-                if (!hasSvgDep) {
+            if (FileHelperNew.isAutoDetectionEnable(config)) {
+                if (hasSvg && !hasSvgDep) {
                     val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
                     depsToAdd["flutter_svg"] = svgVersion
                     hasSvgDep = true
-                } else {
-                    LOG.info(
-                        "[FlutterAssetsGenerator #FileGenerator] [generateWithConfig] flutter_svg dependency already exists, skipping addition"
-                    )
                 }
-            }
-            if (hasLottie) {
-                if (!hasLottieDep) {
+                if (hasLottie && !hasLottieDep) {
                     val lottieVersion = DependencyVersionSelector.getLottieVersion(flutterVersion)
                     depsToAdd["lottie"] = lottieVersion
                     hasLottieDep = true
-                } else {
-                    LOG.info(
-                        "[FlutterAssetsGenerator #FileGenerator] [generateWithConfig] lottie dependency already exists, skipping addition"
-                    )
                 }
             }
 
-            if (depsToAdd.isNotEmpty()) {
-                DependencyHelper.addDependencies(project, pubspecFile, depsToAdd)
-            }
+            // 3. 生成代码 (Generate Code)
+            val content =
+                DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
+                    .generate()
+
+            GenerationData(content, depsToAdd, flutterVersion)
+        }
+    }
+
+    /** 执行写入 (EDT 执行) */
+    private fun performWrite(config: ModulePubSpecConfig, data: GenerationData) {
+        val pubspecFile = config.pubRoot.pubspec
+
+        // 添加依赖
+        if (data.depsToAdd.isNotEmpty()) {
+            DependencyHelper.addDependencies(project, pubspecFile, data.depsToAdd)
         }
 
-        // 3. 生成代码 (Generate Code)
-        // 检测 Flutter 版本用于生成兼容的模板
-        val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
-        // 即使没有依赖，也可能生成 path 常量，但不会生成 .svg()/.lottie() 方法
-        val content =
-            DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
-                .generate()
-
-        // 4. 写入文件
+        // 写入文件
         val psiManager = PsiManager.getInstance(project)
         val psiDocumentManager = PsiDocumentManager.getInstance(project)
         FileHelperNew.getGeneratedFile(config).let { generated ->
             psiManager.findFile(generated)?.let { dartFile ->
                 psiDocumentManager.getDocument(dartFile)?.let { document ->
-                    if (document.text != content) {
-                        document.setText(content)
+                    if (document.text != data.content) {
+                        document.setText(data.content)
                         psiDocumentManager.commitDocument(document)
 
-                        // 恢复自动格式化
-                        // 使用 ReformatCodeProcessor 以一致的行为执行格式化（包括可能的 Optimize Imports 和 dart format
-                        // 调用）
                         try {
                             ReformatCodeProcessor(project, dartFile, null, false).run()
                         } catch (e: Exception) {
