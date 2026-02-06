@@ -824,25 +824,26 @@ class LottieGenImage {
 
     // 生成安全的变量名 (驼峰命名,处理关键词冲突和特殊字符)
     private fun getSafeName(name: String): String {
-        // 移除文件扩展名
-        val nameWithoutExt = name.substringBeforeLast('.')
-
         // 过滤特殊字符:空格、括号、引号等,替换为下划线
         val filtered =
-            nameWithoutExt
-                .replace(Regex("[\\s()\\[\\]{}'\"`!@#$%^&*+=|\\\\:;,<>?/]"), "_")
+            name.replace(Regex("[\\s()\\[\\]{}'\"`!@#$%^&*+=|\\\\:;,<>?/]"), "_")
                 .replace(Regex("_+"), "_") // 将连续的下划线替换为单个
                 .trim('_') // 移除首尾的下划线
 
         // 转换为驼峰命名
         var newName = filtered.toLowCamelCase(Regex("[-_.]"))
 
+        // 处理以数字开头的情况 (Dart变量名不能以数字开头)
+        if (newName.isNotEmpty() && newName[0].isDigit()) {
+            newName = "a$newName"
+        }
+
         // 处理关键词冲突
         if (isKeyWord(newName)) {
             newName = "${newName}_"
         }
 
-        return newName
+        return newName.ifEmpty { "unnamed" }
     }
 
     /** 生成目录对应的类名 策略: 使用节点名称转换为驼峰命名 + "Gen" 后缀,并在前面加上 "$" 符号和根类名 例如: image 目录 -> $AssetsImageGen */
