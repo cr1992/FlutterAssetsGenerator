@@ -23,6 +23,7 @@ object AssetTreeBuilder {
     private val LOG = Logger.getInstance(AssetTreeBuilder::class.java)
 
     private val imageExtensions = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp", "wbmp", "ico")
+    private val resolutionDirPattern = Regex("^\\d+(\\.\\d+)?x$")
 
     /**
      * 构建资源树
@@ -180,6 +181,13 @@ object AssetTreeBuilder {
         if (file.name.startsWith(".")) {
             LOG.info(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [shouldIgnore] Ignoring dot file: ${file.name}"
+            )
+            return true
+        }
+
+        if (file.isDirectory && resolutionDirPattern.matches(file.name)) {
+            LOG.info(
+                "[FlutterAssetsGenerator #AssetTreeBuilder] [shouldIgnore] Ignoring resolution variant directory: ${file.name}"
             )
             return true
         }
