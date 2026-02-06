@@ -4,6 +4,7 @@ import com.crzsc.plugin.utils.PluginUtils.showNotify
 import com.intellij.codeInsight.actions.ReformatCodeProcessor
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -21,7 +22,7 @@ import org.jetbrains.yaml.psi.YAMLSequence
 class FileGenerator(private val project: Project) {
     companion object {
         private val LOG =
-            com.intellij.openapi.diagnostic.Logger.getInstance(FileGenerator::class.java)
+            Logger.getInstance(FileGenerator::class.java)
     }
 
     /** 为所有模块重新生成 */
@@ -233,7 +234,13 @@ class FileGenerator(private val project: Project) {
 
     private fun traversalDir(file: VirtualFile, rootPath: String, list: MutableList<String>) {
         if (file.isDirectory) {
-            list.add("${file.path.removePrefix(rootPath)}/")
+            val name = file.name
+            // 过滤分辨率相关的目录: 1.5x, 2.0x, 3.0x 等
+            // 正则匹配: 数字开头 + 可选(.数字) + x结尾
+            val isResolutionDir = name.matches(Regex("^[0-9]+(\\.[0-9]+)?x$"))
+            if (!isResolutionDir) {
+                list.add("${file.path.removePrefix(rootPath)}/")
+            }
             file.children.forEach {
                 if (it.isDirectory) {
                     traversalDir(it, rootPath, list)
