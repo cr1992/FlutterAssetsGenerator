@@ -10,7 +10,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
-import io.flutter.utils.FlutterModuleUtils
 import java.io.File
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.util.findModule
@@ -105,7 +104,8 @@ class FileGenerator(private val project: Project) {
         val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
         // 即使没有依赖，也可能生成 path 常量，但不会生成 .svg()/.lottie() 方法
         val content =
-            DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion).generate()
+            DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
+                .generate()
 
         // 4. 写入文件
         val psiManager = PsiManager.getInstance(project)
@@ -139,14 +139,12 @@ class FileGenerator(private val project: Project) {
     fun buildYaml(file: VirtualFile) {
         saveChanges()
         val modules = FileHelperNew.getAssets(project)
-        var module: ModulePubSpecConfig? = null
-        for (m in modules) {
-            if (file.path.startsWith(m.pubRoot.path)) {
-                module = m
-                break
+        val module =
+            modules.filter { file.path.startsWith(it.pubRoot.path) }.maxByOrNull {
+                it.pubRoot.path.length
             }
-        }
-        if (module != null && FlutterModuleUtils.isFlutterModule(module.module)) {
+
+        if (module != null) {
             val paths = mutableListOf<String>()
             val rootPath = "${module.pubRoot.path}/"
             if (file.isDirectory) {

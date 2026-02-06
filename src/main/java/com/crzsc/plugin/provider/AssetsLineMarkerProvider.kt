@@ -15,28 +15,31 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.scale.ScaleContext
 import com.intellij.util.IconUtil
 import com.intellij.util.SVGLoader
-import io.flutter.utils.FlutterModuleUtils
 import javax.swing.Icon
 import javax.swing.ImageIcon
-import org.jetbrains.kotlin.idea.util.module
 
 /** Svgs.dart显示图标在路径左侧 */
 class AssetsLineMarkerProvider : LineMarkerProvider {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        val module = element.module
-        if (!FlutterModuleUtils.isFlutterModule(module)) return null
         val elementType = (element as? LeafPsiElement?)?.elementType?.toString()
         if (elementType == "REGULAR_STRING_PART") {
             // 这里会被多次调用 尽量减少调用次数
             var assetName: String? = null
             var leadingWithPackageName: String? = null
-            if (module != null) {
-                FileHelperNew.getPubSpecConfig(module)?.let {
-                    assetName = FileHelperNew.getGeneratedFileName(it)
-                    leadingWithPackageName = it.getLeadingWithPackageNameIfChecked()
+            val vFile = element.containingFile.virtualFile
+            if (vFile != null) {
+                val bestConfig =
+                    FileHelperNew.getAssets(element.project)
+                        .filter { vFile.path.startsWith(it.pubRoot.path) }
+                        .maxByOrNull { it.pubRoot.path.length }
+
+                if (bestConfig != null) {
+                    assetName = FileHelperNew.getGeneratedFileName(bestConfig)
+                    leadingWithPackageName = bestConfig.getLeadingWithPackageNameIfChecked()
                 }
             }
+
             // 检查当前文件名是否匹配配置的生成文件名
             // getGeneratedFileName 返回不带扩展名的文件名,需要添加 .dart 后缀
             val filenameCorrect =

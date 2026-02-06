@@ -2,13 +2,17 @@ package com.crzsc.plugin.utils
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiManager
+import com.intellij.psi.search.FilenameIndex
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import io.flutter.pub.PubRoot
 import io.flutter.utils.FlutterModuleUtils
 import java.util.*
 import java.util.regex.Pattern
-import org.jetbrains.kotlin.idea.util.projectStructure.allModules
+import org.jetbrains.kotlin.idea.util.projectStructure.getModule
 import org.jetbrains.kotlin.konan.file.File
 import org.yaml.snakeyaml.Yaml
 
@@ -18,15 +22,16 @@ object FileHelperNew {
     /** 获取所有可用的Flutter Module的Asset配置 */
     @JvmStatic
     fun getAssets(project: Project): List<ModulePubSpecConfig> {
-        val modules = project.allModules()
         val folders = mutableListOf<ModulePubSpecConfig>()
-        for (module in modules) {
-            if (FlutterModuleUtils.isFlutterModule(module)) {
-                val moduleDir = module.guessModuleDir()
-                if (moduleDir != null) {
-                    getPubSpecConfig(module)?.let { folders.add(it) }
-                }
-            }
+        val pubspecFiles =
+            FilenameIndex.getVirtualFilesByName(
+                "pubspec.yaml",
+                GlobalSearchScope.projectScope(project)
+            )
+
+        for (pubspecFile in pubspecFiles) {
+            val module = pubspecFile.getModule(project) ?: continue
+            getPubSpecConfig(module, pubspecFile)?.let { folders.add(it) }
         }
         return folders
     }
@@ -44,9 +49,20 @@ object FileHelperNew {
     }
 
     @JvmStatic
-    fun getPubSpecConfig(module: Module): ModulePubSpecConfig? {
+    fun getPubSpecConfig(module: Module, pubspecFile: VirtualFile): ModulePubSpecConfig? {
+        val psiFile = PsiManager.getInstance(module.project).findFile(pubspecFile) ?: return null
+
+        return CachedValuesManager.getCachedValue(psiFile) {
+            CachedValueProvider.Result.create(computePubSpecConfig(module, pubspecFile), psiFile)
+        }
+    }
+
+    private fun computePubSpecConfig(
+        module: Module,
+        pubspecFile: VirtualFile
+    ): ModulePubSpecConfig? {
         try {
-            val moduleDir = module.guessModuleDir()
+            val moduleDir = pubspecFile.parent
             val pubRoot = PubRoot.forDirectory(moduleDir)
             if (moduleDir != null && pubRoot != null) {
                 // 优先从 Document 读取(内存中的最新内容)
