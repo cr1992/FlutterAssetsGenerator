@@ -3,14 +3,14 @@
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [3.0.0]
 ### BREAKING CHANGES / 重大变更
-- **Default Generation Style**: The default generated code is now **hierarchical** (e.g., `Assets.images.logo`) instead of flat. To restore the old flat behavior, add `style: camel_case` to your `plugin` config in `pubspec.yaml`.
-  - **默认生成风格**: 默认生成的代码现在是 **分层级** 的 (例如 `Assets.images.logo`) 而不是扁平的。如果需要恢复旧版的扁平风格，请在 `pubspec.yaml` 配置中添加 `style: camel_case`。
+- **Default Generation Style**: The default generated code is now **hierarchical** (e.g., `Assets.images.logo`) instead of flat. To restore the old flat behavior, add `style: legacy` to your `plugin` config in `pubspec.yaml`.
+  - **默认生成风格**: 默认生成的代码现在是 **分层级** 的 (例如 `Assets.images.logo`) 而不是扁平的。如果需要恢复旧版的扁平风格，请在 `pubspec.yaml` 配置中添加 `style: legacy`。
 
 ### Added / 新增
 - **Multi-Module Support**: Complete isolation for config per module/project.
   - **多模块支持**: 实现模块/项目级别的配置完全隔离，互不干扰。
-- **Legacy Compatibility**: Added `style` option (`robust` vs `camel_case`) to support legacy flat generation style.
-  - **旧版兼容**: 新增 `style` 选项 (`robust` 或 `camel_case`)，支持恢复旧版的扁平生成风格。
+- **Legacy Compatibility**: Added `style` option (`robust` vs `legacy`) to support legacy flat generation style.
+  - **旧版兼容**: 新增 `style` 选项 (`robust` 或 `legacy`)，支持恢复旧版的扁平生成风格。
 - **Safe Generation**: Moved generation logic to `invokeLater` to prevent file locking issues.
   - **安全生成**: 将生成逻辑移至 `invokeLater` 执行，彻底解决文件锁冲突问题。
 - **Auto Format**: Restored automatic code formatting for generated files.

@@ -4,7 +4,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
 - **Multi-Module Support**: Seamlessly supports nested Flutter modules and monorepos (e.g. `example/` or `packages/`).
-- **Legacy Compatibility**: Supports `style: camel_case` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
+- **Legacy Compatibility**: Supports `style: legacy` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
 - **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
 - **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects.
 - **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies.
@@ -29,7 +29,7 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
-  style: robust # Options: robust (default), camel_case (legacy)
+  style: robust # Options: robust (default), legacy (legacy)
   path_ignore: []
 ```
 
@@ -45,7 +45,7 @@ flutter_assets_generator:
   class_name: Assets
   # Enable/Disable auto monitoring and dependency management. Default: true
   auto_detection: true
-  # Generation style: robust (Hierarchical) or camel_case (Flat legacy). Default: robust
+  # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
   # Ignore specific paths. Default: []
   path_ignore: ["assets/fonts"]

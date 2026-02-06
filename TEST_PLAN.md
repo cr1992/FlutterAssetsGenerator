@@ -75,7 +75,7 @@
     1.  修改 `pubspec.yaml` 配置：
         ```yaml
         flutter_assets_generator:
-          style: camel_case
+          style: legacy
         ```
     2.  保存文件。
 *   **预期**: 

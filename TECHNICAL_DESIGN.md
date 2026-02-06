@@ -328,11 +328,11 @@ class AssetGenImage {
 ```
 这种设计允许用户通过 `Assets.images.logo.image()` 链式调用，极大提升了编码体验和类型安全性。
 
-### 4.3 兼容性设计 (Compatibility)
+### 4.4 兼容性设计 (Compatibility)
 针对老用户，通过简单的配置回退：
 ```yaml
 flutter_assets_generator:
-  style: camel_case
+  style: legacy
 ```
 插件会切换回扁平化生成策略，但**底层依然复用 v3.0 的文件系统监听、内存读取和防抖机制**。这意味着老用户也能享受到新架构的稳定性和性能提升。
 

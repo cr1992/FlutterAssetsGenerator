@@ -11,7 +11,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
 - **Multi-Module Support**: Seamlessly supports nested Flutter modules and monorepos (e.g. `example/` or `packages/`).
-- **Legacy Compatibility**: Supports `style: camel_case` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
+- **Legacy Compatibility**: Supports `style: legacy` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
 - **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
 - **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects.
 - **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies.
@@ -36,7 +36,7 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
-  style: robust # Options: robust (default), camel_case (legacy)
+  style: robust # Options: robust (default), legacy (legacy)
   path_ignore: []
 ```
 
@@ -52,7 +52,7 @@ flutter_assets_generator:
   class_name: Assets
   # Enable/Disable auto monitoring and dependency management. Default: true
   auto_detection: true
-  # Generation style: robust (Hierarchical) or camel_case (Flat legacy). Default: robust
+  # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
   # Ignore specific paths. Default: []
   path_ignore: ["assets/fonts"]
@@ -100,7 +100,7 @@ String path = Assets.images.logo.path;
 
 -   **分层生成**：根据目录结构生成对应的嵌套类，精确反映资源层级（例如 `Assets.images.logo`）。
 -   **多模块支持**：完美支持嵌套的 Flutter 模块和 Monorepo 项目结构（如 `example/` 或 `packages/`）。
--   **旧版兼容**：支持 `style: camel_case` 以生成扁平变量名 (例如 `Assets.imagesLogo`)，方便迁移。
+-   **旧版兼容**：支持 `style: legacy` 以生成扁平变量名 (例如 `Assets.imagesLogo`)，方便迁移。
 -   **智能类型支持**：自动识别 `SVG` 和 `Lottie` 动画文件。
 -   **Widget 集成**：直接在资源对象上生成 `.svg()` 和 `.lottie()` 方法。
 -   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg` 或 `lottie`。
@@ -125,9 +125,9 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
-  # 生成风格: robust (默认), camel_case (旧版兼容)
+  # 生成风格: robust (默认), legacy (旧版兼容)
   # robust: 分层级风格 (Assets.images.logo)
-  # camel_case: 扁平风格 (Assets.imagesLogo)
+  # legacy: 扁平风格 (Assets.imagesLogo)
   style: robust
   path_ignore: []
 ```
@@ -146,7 +146,7 @@ flutter_assets_generator:
   class_name: Assets
   # 是否开启自动监测和依赖管理。默认: true
   auto_detection: true
-  # 生成风格: robust (分层级) 或 camel_case (旧版扁平)。默认: robust
+  # 生成风格: robust (分层级) 或 legacy (旧版扁平)。默认: robust
   style: robust
   # 忽略的路径。默认: []
   path_ignore: ["assets/fonts"]
