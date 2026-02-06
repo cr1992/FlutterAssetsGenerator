@@ -1,6 +1,7 @@
 package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.utils.PluginUtils.showNotify
+import com.intellij.codeInsight.actions.ReformatCodeProcessor
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
@@ -8,7 +9,6 @@ import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
-import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import io.flutter.utils.FlutterModuleUtils
 import java.io.File
@@ -105,8 +105,7 @@ class FileGenerator(private val project: Project) {
         val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
         // 即使没有依赖，也可能生成 path 常量，但不会生成 .svg()/.lottie() 方法
         val content =
-            DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
-                .generate()
+            DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion).generate()
 
         // 4. 写入文件
         val psiManager = PsiManager.getInstance(project)
@@ -119,10 +118,10 @@ class FileGenerator(private val project: Project) {
                         psiDocumentManager.commitDocument(document)
 
                         // 恢复自动格式化
-                        // 因为现在的生成过程已经在 invokeLater 中执行,且在 WriteCommandAction 中
-                        // 所以可以安全地执行格式化
+                        // 使用 ReformatCodeProcessor 以一致的行为执行格式化（包括可能的 Optimize Imports 和 dart format
+                        // 调用）
                         try {
-                            CodeStyleManager.getInstance(project).reformat(dartFile)
+                            ReformatCodeProcessor(project, dartFile, null, false).run()
                         } catch (e: Exception) {
                             LOG.warn("Failed to reformat file: ${dartFile.name}", e)
                         }
