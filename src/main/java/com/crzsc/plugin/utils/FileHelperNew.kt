@@ -193,7 +193,7 @@ object FileHelperNew {
         readSetting(config, Constants.KEY_OUTPUT_FILENAME) as? String
             ?: Constants.DEFAULT_CLASS_NAME.lowercase()
 
-    /** 读取生成风格配置 return "robust" | "camel_case" */
+    /** 读取生成风格配置 return "robust" | "legacy" */
     fun getGenerationStyle(config: ModulePubSpecConfig): String {
         return readSetting(config, "style") as? String ?: "robust"
     }

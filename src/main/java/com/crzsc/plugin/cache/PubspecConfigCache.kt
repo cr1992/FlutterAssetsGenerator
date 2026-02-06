@@ -26,7 +26,7 @@ data class PubspecConfig(
     val outputFilename: String,
     val filenameSplitPattern: String,
     val pathIgnore: List<String>,
-    val generationStyle: String // "robust" (default), "camel_case", "snake_case"
+    val generationStyle: String // "robust" (default), "legacy", "snake_case"
 ) {
     companion object {
         private val LOG = Logger.getInstance(PubspecConfig::class.java)
@@ -75,7 +75,7 @@ data class PubspecConfig(
                     (pluginConfig?.get("path_ignore") as? List<*>)?.mapNotNull { it as? String }
                         ?: emptyList()
 
-                // 读取生成风格配置: 'robust' (默认,新版), 'camel_case' (旧版兼容)
+                // 读取生成风格配置: 'robust' (默认,新版), 'legacy' (旧版兼容)
                 val generationStyle = pluginConfig?.get("style") as? String ?: "robust"
 
                 return PubspecConfig(

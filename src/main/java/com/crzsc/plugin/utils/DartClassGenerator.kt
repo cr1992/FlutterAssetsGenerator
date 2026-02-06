@@ -24,7 +24,7 @@ class DartClassGenerator(
         val style = FileHelperNew.getGenerationStyle(config)
         LOG.info("[FlutterAssetsGenerator #DartClassGenerator] Generation style: $style")
 
-        return if (style == "camel_case") {
+        return if (style == "legacy") {
             generateLegacy()
         } else {
             generateRobust()
