@@ -43,7 +43,7 @@ class ReproduceBugTest {
         if (buttonItemNode == null) fail("button-item missing")
 
         // Verify bg.png exists
-        val bgNode = buttonItemNode.children.find { it.name == "bg" }
+        val bgNode = buttonItemNode!!.children.find { it.name == "bg" }
         if (bgNode == null) fail("bg.png should be present")
 
         // Verify nested dir does NOT exist
