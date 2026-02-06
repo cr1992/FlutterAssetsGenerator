@@ -1,7 +1,7 @@
 # Flutter Assets Generator 3.0.0 技术方案详述
 
-> **文档版本**: `d485e7e` - 性能优化 (2026-02-04)  
-> **最后更新**: 2026-02-04
+> **文档版本**: `cca3549` - 异步生成与性能优化 (2026-02-06)  
+> **最后更新**: 2026-02-06
 
 本文档详细描述了 Flutter Assets Generator 插件 (v3.0.0) 的技术架构、核心流程与关键实现细节。
 
@@ -245,7 +245,29 @@ private val NOTIFICATION_GROUP = NotificationGroup(
 )
 ```
 
-#### 4.2.3 配置变更检测优化
+#### 4.2.2 异步文件生成 (Asynchronous Generation)
+**类路径**: `src/main/java/com/crzsc/plugin/utils/FileGenerator.kt`
+
+**问题**: 旧版本在 EDT (UI 线程) 同步执行文件 I/O、Process 执行和大量字符串拼接，导致 IDE 偶发性卡顿。
+
+**解决方案**: 分离计算与写入。
+1.  **数据准备 (Background)**:
+    *   使用 `ProgressManager` + `Task.Backgroundable` 将繁重计算移至后台线程。
+    *   包括：`AssetTreeBuilder` (遍历文件)、`FlutterVersionHelper` (执行命令)、`DartClassGenerator` (生成代码)。
+2.  **原子写入 (EDT)**:
+    *   仅当后台计算完成且数据有效时，通过 `invokeLater` + `WriteCommandAction` 回到 UI 线程。
+    *   执行极轻量的文件写入操作 (`Document.setText`)，瞬间完成，用户无感知。
+
+#### 4.2.3 配置解析优化 (Configuration Optimization)
+**类路径**: `src/main/java/com/crzsc/plugin/listener/PubspecDocumentListener.kt`
+
+**问题**: `pubspec.yaml` 保存时，监听器解析一次 YAML，后续工具类又重新从文件读取解析一次，造成双重 I/O 和冗余计算。
+
+**解决方案**:
+*   引入 `PubspecConfig.fromMap()` 和 `FileHelperNew.getPubSpecConfigFromMap()`。
+*   监听器直接复用首次解析的 `Map` 数据结构传递给生成器，实现 **Single Pass Parsing**。
+
+#### 4.2.4 配置变更检测优化
 **类路径**: `src/main/java/com/crzsc/plugin/cache/PubspecConfigCache.kt`
 
 **问题**: 依赖版本变化会触发不必要的代码重新生成。
@@ -261,6 +283,13 @@ private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
 ```
 
 **效果**: 依赖自动注入后不再触发重复生成,提升用户体验。
+
+#### 4.2.5 通知组单例模式
+**类路径**: `src/main/java/com/crzsc/plugin/utils/PluginUtils.kt`
+
+**问题**: 每次调用 `showNotify()` 都创建新的 `NotificationGroup` 实例,导致重复注册警告。
+
+**解决方案**: 将 `NotificationGroup` 定义为 `companion object` 中的单例常量。
 
 ### 4.3 智能生成风格 (Robust Style)
 v3.0.0 默认采用 Robust 风格，生成的类结构如下：

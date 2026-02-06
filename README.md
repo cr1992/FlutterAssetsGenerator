@@ -17,6 +17,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
+    - **Performance**: Fully **Asynchronous** generation process that never blocks the IDE UI. Say goodbye to freezes.
 
 ### Usage
 
@@ -104,6 +105,7 @@ String path = Assets.images.logo.path;
 -   **智能自动更新**：
     -   **资源文件**: 监听图片文件增删，自动重新生成。
     -   **配置文件**: 监听 `pubspec.yaml` 的**保存**动作 (Cmd+S)。智能 Diff 算法确保只在配置真正变化时构建。
+    -   **性能优化**: 核心生成逻辑完全**异步化**，不再阻塞 IDE UI 线程，彻底告别卡顿。
 
 ### 使用方法
 

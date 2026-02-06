@@ -10,6 +10,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
+    - **Performance**: Fully **Asynchronous** generation process that never blocks the IDE UI. Say goodbye to freezes.
 
 ## Usage
 
