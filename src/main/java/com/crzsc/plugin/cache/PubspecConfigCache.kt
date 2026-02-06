@@ -32,6 +32,56 @@ data class PubspecConfig(
         private val LOG = Logger.getInstance(PubspecConfig::class.java)
 
         /** 从 pubspec.yaml 读取配置 */
+        /** 从 Map 解析配置 */
+        fun fromMap(data: Map<*, *>): PubspecConfig {
+            // 读取 flutter.assets
+            val flutterMap = data["flutter"] as? Map<*, *>
+            val assetPaths =
+                (flutterMap?.get("assets") as? List<*>)?.mapNotNull { it as? String }
+                    ?: emptyList()
+
+            // 读取依赖版本
+            val dependencies = data["dependencies"] as? Map<*, *>
+            val flutterSvgVersion = dependencies?.get("flutter_svg") as? String
+            val lottieVersion = dependencies?.get("lottie") as? String
+
+            // 读取环境配置
+            val environment = data["environment"] as? Map<*, *>
+            val flutterVersion = environment?.get("flutter") as? String
+            val dartVersion = environment?.get("sdk") as? String
+
+            // 读取插件配置
+            val pluginConfig = data["flutter_assets_generator"] as? Map<*, *>
+            val autoDetection = pluginConfig?.get("auto_detection") as? Boolean ?: false
+            val outputDir = pluginConfig?.get("output_dir") as? String ?: "generated"
+            val className = pluginConfig?.get("class_name") as? String ?: "Assets"
+            val outputFilename = pluginConfig?.get("output_filename") as? String ?: "assets"
+            val filenameSplitPattern =
+                pluginConfig?.get("filename_split_pattern") as? String ?: "[-_]"
+            val pathIgnore =
+                (pluginConfig?.get("path_ignore") as? List<*>)?.mapNotNull { it as? String }
+                    ?: emptyList()
+
+            // 读取生成风格配置: 'robust' (默认,新版), 'legacy' (旧版兼容)
+            val generationStyle = pluginConfig?.get("style") as? String ?: "robust"
+
+            return PubspecConfig(
+                assetPaths = assetPaths,
+                flutterSvgVersion = flutterSvgVersion,
+                lottieVersion = lottieVersion,
+                flutterVersion = flutterVersion,
+                dartVersion = dartVersion,
+                autoDetection = autoDetection,
+                outputDir = outputDir,
+                className = className,
+                outputFilename = outputFilename,
+                filenameSplitPattern = filenameSplitPattern,
+                pathIgnore = pathIgnore,
+                generationStyle = generationStyle
+            )
+        }
+
+        /** 从 pubspec.yaml 读取配置 */
         fun fromPubspec(project: Project, pubspecFile: VirtualFile): PubspecConfig? {
             try {
                 // 优先从 Document 读取(内存中的最新内容),如果获取不到则从磁盘读取
@@ -45,53 +95,9 @@ data class PubspecConfig(
                 val content = document?.text ?: String(pubspecFile.contentsToByteArray())
 
                 val yaml = Yaml()
-                val data = yaml.load<Map<*, *>>(content)
+                val data = yaml.load<Map<*, *>>(content) ?: return null
 
-                // 读取 flutter.assets
-                val flutterMap = data["flutter"] as? Map<*, *>
-                val assetPaths =
-                    (flutterMap?.get("assets") as? List<*>)?.mapNotNull { it as? String }
-                        ?: emptyList()
-
-                // 读取依赖版本
-                val dependencies = data["dependencies"] as? Map<*, *>
-                val flutterSvgVersion = dependencies?.get("flutter_svg") as? String
-                val lottieVersion = dependencies?.get("lottie") as? String
-
-                // 读取环境配置
-                val environment = data["environment"] as? Map<*, *>
-                val flutterVersion = environment?.get("flutter") as? String
-                val dartVersion = environment?.get("sdk") as? String
-
-                // 读取插件配置
-                val pluginConfig = data["flutter_assets_generator"] as? Map<*, *>
-                val autoDetection = pluginConfig?.get("auto_detection") as? Boolean ?: false
-                val outputDir = pluginConfig?.get("output_dir") as? String ?: "generated"
-                val className = pluginConfig?.get("class_name") as? String ?: "Assets"
-                val outputFilename = pluginConfig?.get("output_filename") as? String ?: "assets"
-                val filenameSplitPattern =
-                    pluginConfig?.get("filename_split_pattern") as? String ?: "[-_]"
-                val pathIgnore =
-                    (pluginConfig?.get("path_ignore") as? List<*>)?.mapNotNull { it as? String }
-                        ?: emptyList()
-
-                // 读取生成风格配置: 'robust' (默认,新版), 'legacy' (旧版兼容)
-                val generationStyle = pluginConfig?.get("style") as? String ?: "robust"
-
-                return PubspecConfig(
-                    assetPaths = assetPaths,
-                    flutterSvgVersion = flutterSvgVersion,
-                    lottieVersion = lottieVersion,
-                    flutterVersion = flutterVersion,
-                    dartVersion = dartVersion,
-                    autoDetection = autoDetection,
-                    outputDir = outputDir,
-                    className = className,
-                    outputFilename = outputFilename,
-                    filenameSplitPattern = filenameSplitPattern,
-                    pathIgnore = pathIgnore,
-                    generationStyle = generationStyle
-                )
+                return fromMap(data)
             } catch (e: Exception) {
                 LOG.warn(
                     "[FlutterAssetsGenerator #${project.name}] Failed to read pubspec config",

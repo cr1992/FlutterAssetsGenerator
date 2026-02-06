@@ -57,6 +57,41 @@ object FileHelperNew {
         }
     }
 
+    fun getPubSpecConfigFromMap(
+        module: Module,
+        pubspecFile: VirtualFile,
+        pubConfigMap: Map<String, Any>
+    ): ModulePubSpecConfig? {
+        try {
+            val moduleDir = pubspecFile.parent
+            val pubRoot = PubRoot.forDirectory(moduleDir)
+            if (moduleDir != null && pubRoot != null) {
+                val assetVFiles = mutableListOf<VirtualFile>()
+                (pubConfigMap["flutter"] as? Map<*, *>)?.let { configureMap ->
+                    (configureMap["assets"] as? ArrayList<*>)?.let { list ->
+                        for (path in list) {
+                            moduleDir.findFileByRelativePath(path as String)?.let {
+                                if (!assetVFiles.contains(it)) {
+                                    assetVFiles.add(it)
+                                }
+                            }
+                        }
+                    }
+                }
+                return ModulePubSpecConfig(
+                    module,
+                    pubRoot,
+                    assetVFiles,
+                    pubConfigMap,
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+        return null
+    }
+
     private fun computePubSpecConfig(
         module: Module,
         pubspecFile: VirtualFile
@@ -77,24 +112,7 @@ object FileHelperNew {
 
                 val pubConfigMap = Yaml().load(content) as? Map<String, Any>
                 if (pubConfigMap != null) {
-                    val assetVFiles = mutableListOf<VirtualFile>()
-                    (pubConfigMap["flutter"] as? Map<*, *>)?.let { configureMap ->
-                        (configureMap["assets"] as? ArrayList<*>)?.let { list ->
-                            for (path in list) {
-                                moduleDir.findFileByRelativePath(path as String)?.let {
-                                    if (!assetVFiles.contains(it)) {
-                                        assetVFiles.add(it)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return ModulePubSpecConfig(
-                        module,
-                        pubRoot,
-                        assetVFiles,
-                        pubConfigMap,
-                    )
+                    return getPubSpecConfigFromMap(module, pubspecFile, pubConfigMap)
                 }
             }
         } catch (e: Exception) {

@@ -10,6 +10,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import org.yaml.snakeyaml.Yaml
 
 /** pubspec.yaml 文档保存监听器 只在保存时检测配置变更并触发生成 */
 class PubspecDocumentListener(private val project: Project) : FileDocumentManagerListener {
@@ -28,10 +29,10 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
             return
         }
 
-        handlePubspecSave(file)
+        handlePubspecSave(file, document)
     }
 
-    private fun handlePubspecSave(pubspecFile: VirtualFile) {
+    private fun handlePubspecSave(pubspecFile: VirtualFile, document: Document) {
         LOG.info(
             "[FlutterAssetsGenerator #${project.name}] pubspec.yaml saved: ${pubspecFile.path}"
         )
@@ -59,14 +60,13 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
             ApplicationManager.getApplication().invokeLater {
                 if (!project.isDisposed) {
                     try {
+                        val content = document.text
+                        val yaml = Yaml()
+                        val data = yaml.load<Map<*, *>>(content) ?: return@invokeLater
+
                         // 在这里读取配置,确保文件已经保存到磁盘
-                        val newConfig = PubspecConfig.fromPubspec(project, pubspecFile)
-                        if (newConfig == null) {
-                            LOG.warn(
-                                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Failed to read pubspec config"
-                            )
-                            return@invokeLater
-                        }
+                        // 使用优化后的 fromMap 避免重复解析
+                        val newConfig = PubspecConfig.fromMap(data)
 
                         // 检查配置是否改变
                         val hasChanged =
@@ -81,12 +81,14 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
                             PubspecConfigCache.put(project, modulePath, newConfig)
 
                             // 使用最新的配置重新加载 ModulePubSpecConfig 对象
-                            // 必须这样做,因为原本的 config 对象包含的是旧的配置信息(如 className 等)
+                            // 使用 optimize 的 getPubSpecConfigFromMap 避免再次解析 YAML
                             val updatedConfig =
-                                FileHelperNew.getPubSpecConfig(
+                                FileHelperNew.getPubSpecConfigFromMap(
                                     config.module,
-                                    config.pubRoot.pubspec
+                                    config.pubRoot.pubspec,
+                                    data as Map<String, Any>
                                 )
+
                             if (updatedConfig != null) {
                                 // 触发生成
                                 fileGenerator.generateOne(updatedConfig)
