@@ -46,7 +46,16 @@ object AssetTreeBuilder {
             LOG.info(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [AssetTreeBuilder] Processing file: ${file.path}"
             )
-            processFile(file, rootNode, moduleRootPath, ignorePath)
+            if (file.isDirectory) {
+                // 对于目录，使用 getNodeForPath 构建正确的层级结构（例如 assets-b/button-item 而不是将其扁平化到根）
+                val dirNode = getNodeForPath(file, rootNode, moduleRootPath)
+                // 仅递归处理该目录下的子文件
+                file.children.filter { !it.isDirectory }.forEach { child ->
+                    processFile(child, dirNode, moduleRootPath, ignorePath)
+                }
+            } else {
+                processFile(file, rootNode, moduleRootPath, ignorePath)
+            }
         }
 
         LOG.info(
