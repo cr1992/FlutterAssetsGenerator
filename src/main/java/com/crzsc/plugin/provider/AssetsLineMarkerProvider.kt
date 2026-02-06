@@ -14,8 +14,10 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.IconUtil
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.swing.Icon
+import javax.swing.ImageIcon
 
 /** Svgs.dart显示图标在路径左侧 */
 class AssetsLineMarkerProvider : LineMarkerProvider {
@@ -95,8 +97,22 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 val url = File(vFile.path).toURI().toURL()
                 val baseIcon = IconLoader.findIcon(url)
                 if (baseIcon != null) {
-                    val scale = 16.0f / baseIcon.iconWidth
-                    IconUtil.scale(baseIcon, null, scale)
+                    val width = baseIcon.iconWidth
+                    val height = baseIcon.iconHeight
+                    if (width > 0 && height > 0) {
+                        // 使用 BufferedImage 进行栅格化，确保 IDE 拿到的永远是 16x16 的静态位图
+                        // 这样可以避免 IconLoader 异步加载过程中的尺寸变化导致的 UI 闪烁/占位过大问题
+                        val image = BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB)
+                        val g = image.createGraphics()
+                        // 始终按比例缩放，确保长宽最大不超过 16
+                        val scale = 16.0 / kotlin.math.max(width, height)
+                        g.scale(scale, scale)
+                        baseIcon.paintIcon(null, g, 0, 0)
+                        g.dispose()
+                        ImageIcon(image)
+                    } else {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -114,7 +130,8 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 return@LineMarkerInfo ""
             },
             { _, _ -> element.openFile(vFile) },
-            GutterIconRenderer.Alignment.LEFT
+            GutterIconRenderer.Alignment.LEFT,
+            { "SVG Asset" }
         )
     }
 
@@ -134,7 +151,8 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 return@LineMarkerInfo ""
             },
             { _, _ -> element.openFile(vFile) },
-            GutterIconRenderer.Alignment.LEFT
+            GutterIconRenderer.Alignment.LEFT,
+            { "Asset File" }
         )
     }
 }
