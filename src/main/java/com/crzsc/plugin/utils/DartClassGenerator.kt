@@ -133,7 +133,14 @@ class DartClassGenerator(
                 nameMap[assetName] = 1
             }
 
-            val fullPath = "$prefix${file.path}"
+            var fullPath = "$prefix${file.path}"
+            val isPackageParameterEnabled = FileHelperNew.isPackageParameterEnabled(config)
+            if (isPackageParameterEnabled) {
+                val packageName = config.map["name"] as? String
+                if (packageName != null) {
+                    fullPath = "packages/$packageName/$fullPath"
+                }
+            }
             buffer.append("  static const String $assetName = '$fullPath';\n")
         }
 
