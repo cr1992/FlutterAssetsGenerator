@@ -27,7 +27,7 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
         if (elementType == "REGULAR_STRING_PART") {
             // 这里会被多次调用 尽量减少调用次数
             var assetName: String? = null
-            var leadingWithPackageName: String? = null
+
             val vFile = element.containingFile.virtualFile
             if (vFile != null) {
                 val bestConfig =
@@ -37,7 +37,6 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
 
                 if (bestConfig != null) {
                     assetName = FileHelperNew.getGeneratedFileName(bestConfig)
-                    leadingWithPackageName = bestConfig.getLeadingWithPackageNameIfChecked()
                 }
             }
 
@@ -47,23 +46,18 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 assetName != null && element.containingFile.name.equals("$assetName.dart", true)
             if (filenameCorrect) {
                 //                println("filenameCorrect showMakeByType : $element")
-                return showMakeByType(element, leadingWithPackageName)
+                return showMakeByType(element)
             }
         }
         return null
     }
 
-    private fun showMakeByType(
-        element: PsiElement,
-        leadingWithPackageName: String?
-    ): LineMarkerInfo<*>? {
+    private fun showMakeByType(element: PsiElement): LineMarkerInfo<*>? {
         val assetsPath = element.text
         val anchor = PsiTreeUtil.getDeepestFirst(element)
         // 先用默认的path找文件
         var filePath = element.project.basePath + "/" + element.text
-        if (!leadingWithPackageName.isNullOrEmpty()) {
-            filePath = filePath.replace(leadingWithPackageName, "")
-        }
+
         var vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
         if (vFile == null) {
             // 如果没找到，尝试根据当前文件向上查找
@@ -72,9 +66,7 @@ class AssetsLineMarkerProvider : LineMarkerProvider {
                 file = file.parent
             }
             filePath = file.parent.path + "/" + element.text
-            if (!leadingWithPackageName.isNullOrEmpty()) {
-                filePath = filePath.replace(leadingWithPackageName, "")
-            }
+
             vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
         }
         //        println("showMakeByType assetsPath $assetsPath")

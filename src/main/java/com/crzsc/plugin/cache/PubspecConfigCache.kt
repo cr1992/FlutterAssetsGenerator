@@ -26,7 +26,8 @@ data class PubspecConfig(
     val outputFilename: String,
     val filenameSplitPattern: String,
     val pathIgnore: List<String>,
-    val generationStyle: String // "robust" (default), "legacy", "snake_case"
+    val generationStyle: String, // "robust" (default), "legacy", "snake_case"
+    val packageParameterEnabled: Boolean
 ) {
     companion object {
         private val LOG = Logger.getInstance(PubspecConfig::class.java)
@@ -64,6 +65,8 @@ data class PubspecConfig(
 
             // 读取生成风格配置: 'robust' (默认,新版), 'legacy' (旧版兼容)
             val generationStyle = pluginConfig?.get("style") as? String ?: "robust"
+            val packageParameterEnabled =
+                pluginConfig?.get("package_parameter_enabled") as? Boolean ?: false
 
             return PubspecConfig(
                 assetPaths = assetPaths,
@@ -77,7 +80,8 @@ data class PubspecConfig(
                 outputFilename = outputFilename,
                 filenameSplitPattern = filenameSplitPattern,
                 pathIgnore = pathIgnore,
-                generationStyle = generationStyle
+                generationStyle = generationStyle,
+                packageParameterEnabled = packageParameterEnabled
             )
         }
 
@@ -183,7 +187,8 @@ object PubspecConfigCache {
                 old.outputFilename != new.outputFilename ||
                 old.filenameSplitPattern != new.filenameSplitPattern ||
                 old.pathIgnore != new.pathIgnore ||
-                old.generationStyle != new.generationStyle
+                old.generationStyle != new.generationStyle ||
+                old.packageParameterEnabled != new.packageParameterEnabled
         // 注意:故意忽略 flutterSvgVersion, lottieVersion, flutterVersion, dartVersion
     }
 
@@ -227,6 +232,11 @@ object PubspecConfigCache {
         if (old.generationStyle != new.generationStyle) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}] generation_style changed: ${old.generationStyle} -> ${new.generationStyle}"
+            )
+        }
+        if (old.packageParameterEnabled != new.packageParameterEnabled) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] package_parameter_enabled changed: ${old.packageParameterEnabled} -> ${new.packageParameterEnabled}"
             )
         }
         if (old.outputFilename != new.outputFilename) {

@@ -15,6 +15,8 @@
   - **安全生成**: 将生成逻辑移至 `invokeLater` 执行，彻底解决文件锁冲突问题。
 - **Auto Format**: Restored automatic code formatting for generated files.
   - **自动格式化**: 恢复了生成代码的自动格式化功能。
+- **Package Parameter Support**: Added `package_parameter_enabled` option to generate assets with `package` parameter, enabling usage across modules.
+  - **Package 参数支持**: 新增 `package_parameter_enabled` 选项，支持生成带 `package` 参数的资源引用，方便在多模块中跨包使用。
 
 ### Changed / 变更
 - **Smart Trigger**: Configuration changes now trigger on **File Save** (Cmd+S) instead of typing, reducing unnecessary builds.

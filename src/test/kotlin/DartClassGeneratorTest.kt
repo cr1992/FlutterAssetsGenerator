@@ -110,7 +110,7 @@ class DartClassGeneratorTest {
         private fun createMockConfig(): ModulePubSpecConfig {
                 // Mock ModulePubSpecConfig
                 val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
-                Mockito.`when`(mockConfig.getLeadingWithPackageNameIfChecked()).thenReturn("")
+
                 return mockConfig
         }
 }

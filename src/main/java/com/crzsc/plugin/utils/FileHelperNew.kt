@@ -3,6 +3,7 @@ package com.crzsc.plugin.utils
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
@@ -23,11 +24,17 @@ object FileHelperNew {
     @JvmStatic
     fun getAssets(project: Project): List<ModulePubSpecConfig> {
         val folders = mutableListOf<ModulePubSpecConfig>()
-        val pubspecFiles =
-            FilenameIndex.getVirtualFilesByName(
-                "pubspec.yaml",
-                GlobalSearchScope.projectScope(project)
-            )
+        val pubspecFiles = mutableListOf<VirtualFile>()
+        FilenameIndex.processFilesByName(
+            "pubspec.yaml",
+            false,
+            { file: PsiFileSystemItem ->
+                file.virtualFile?.let { pubspecFiles.add(it) }
+                true
+            },
+            GlobalSearchScope.projectScope(project),
+            project
+        )
 
         for (pubspecFile in pubspecFiles) {
             val module = pubspecFile.getModule(project) ?: continue
@@ -135,8 +142,9 @@ object FileHelperNew {
         return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean? ?: true
     }
 
-    fun isWithLeadingWithPackageName(config: ModulePubSpecConfig): Boolean {
-        return readSetting(config, Constants.KEY_LEADING_WITH_PACKAGE_NAME) as Boolean? ?: false
+    /** 是否开启了 package 参数生成 */
+    fun isPackageParameterEnabled(config: ModulePubSpecConfig): Boolean {
+        return readSetting(config, Constants.KEY_PACKAGE_PARAMETER_ENABLED) as Boolean? ?: false
     }
 
     /** 读取生成的类名配置 */
@@ -224,11 +232,4 @@ data class ModulePubSpecConfig(
     val assetVFiles: List<VirtualFile>,
     val map: Map<String, Any>,
     val isFlutterModule: Boolean = FlutterModuleUtils.isFlutterModule(module)
-) {
-    fun getLeadingWithPackageNameIfChecked(): String {
-        if (FileHelperNew.isWithLeadingWithPackageName(this)) {
-            return "packages/${map["name"]}/"
-        }
-        return ""
-    }
-}
+)

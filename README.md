@@ -48,6 +48,8 @@ flutter_assets_generator:
   output_dir: lib/generated/
   # Sets the name for the generated file. Default: assets
   output_filename: assets
+  # Enable package parameter generation (package: 'your_package_name'). Default: false
+  package_parameter_enabled: false
   # Sets the name for the root class. Default: Assets
   class_name: Assets
   # Enable/Disable auto monitoring and dependency management. Default: true
@@ -142,6 +144,8 @@ flutter_assets_generator:
   output_dir: generated/
   # 生成文件的文件名 (无后缀)。默认: assets
   output_filename: assets
+  # 是否启用 package 参数生成 (package: 'your_package_name')。默认: false
+  package_parameter_enabled: false
   # 生成的根类名。默认: Assets
   class_name: Assets
   # 是否开启自动监测和依赖管理。默认: true

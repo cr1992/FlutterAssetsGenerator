@@ -12,6 +12,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
     - **Performance**: Fully **Asynchronous** generation process that never blocks the IDE UI. Say goodbye to freezes.
+- **Package Support**: Option to generate `package: 'name'` parameter for all assets, perfect for modular projects where assets live in a separate package.
 
 ## Usage
 
@@ -43,6 +44,8 @@ flutter_assets_generator:
   output_filename: assets
   # Sets the name for the root class. Default: Assets
   class_name: Assets
+  # Enable package parameter generation (package: 'your_package_name'). Default: false
+  package_parameter_enabled: false
   # Enable/Disable auto monitoring and dependency management. Default: true
   auto_detection: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust

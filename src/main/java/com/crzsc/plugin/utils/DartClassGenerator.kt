@@ -61,7 +61,11 @@ class DartClassGenerator(
         buffer.append("class $rootClassName {\n")
         buffer.append("  $rootClassName._();\n\n")
 
-        val prefix = config.getLeadingWithPackageNameIfChecked()
+        val isPackageParameterEnabled = FileHelperNew.isPackageParameterEnabled(config)
+        val packageName = if (isPackageParameterEnabled) config.map["name"] as? String else null
+
+        val prefix = ""
+
         basePrefix = prefix // 存储基础前缀供递归使用
         LOG.info(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Base prefix: '$prefix'"
@@ -88,7 +92,7 @@ class DartClassGenerator(
         buffer.append(directoryClasses)
 
         // 生成辅助类 (AssetGenImage 等)
-        generateHelperClasses()
+        generateHelperClasses(packageName)
 
         return buffer.toString()
     }
@@ -106,7 +110,7 @@ class DartClassGenerator(
         buffer.append("class $className {\n")
         buffer.append("  $className._();\n\n")
 
-        val prefix = config.getLeadingWithPackageNameIfChecked()
+        val prefix = ""
         val allFiles = mutableListOf<AssetNode>()
         collectFiles(rootNode, allFiles)
 
@@ -510,7 +514,13 @@ class DartClassGenerator(
     }
 
     /** 生成辅助类 (AssetGenImage, SvgGenImage, LottieGenImage) 这些辅助类封装了路径并提供了直接获取 Widget 的方法 */
-    private fun generateHelperClasses() {
+    private fun generateHelperClasses(packageName: String?) {
+        val packageDecl =
+            if (packageName != null) "  static const String package = '$packageName';" else ""
+
+        val pathGetter =
+            if (packageName != null) "'packages/$packageName/\$_assetName'" else "_assetName"
+
         // AssetGenImage: 封装普通图片资源，提供 .image() 和 .provider() 方法
         buffer.append(
             """
@@ -518,6 +528,7 @@ class AssetGenImage {
   const AssetGenImage(this._assetName, {this.size, this.flavors = const {}});
 
   final String _assetName;
+$packageDecl
 
   final Size? size;
   final Set<String> flavors;
@@ -542,7 +553,7 @@ class AssetGenImage {
     bool matchTextDirection = false,
     bool gaplessPlayback = false,
     bool isAntiAlias = false,
-    String? package,
+    String? package${if (packageName != null) " = package" else ""},
     FilterQuality filterQuality = FilterQuality.low,
     int? cacheWidth,
     int? cacheHeight,
@@ -577,7 +588,7 @@ class AssetGenImage {
 
   ImageProvider provider({
     AssetBundle? bundle,
-    String? package,
+    String? package${if (packageName != null) " = package" else ""},
   }) {
     return AssetImage(
       _assetName,
@@ -596,7 +607,7 @@ class AssetGenImage {
     );
   }
   
-  String get path => _assetName;
+  String get path => $pathGetter;
 
   String get keyName => _assetName;
 }
@@ -611,6 +622,7 @@ class SvgGenImage {
   const SvgGenImage(this._assetName);
 
   final String _assetName;
+$packageDecl
 
 """.trimIndent()
         )
@@ -631,7 +643,7 @@ class SvgGenImage {
     Key? key,
     bool matchTextDirection = false,
     AssetBundle? bundle,
-    String? package,
+    String? package${if (packageName != null) " = package" else ""},
     double? width,
     double? height,
     BoxFit fit = BoxFit.contain,
@@ -674,7 +686,7 @@ class SvgGenImage {
     Key? key,
     bool matchTextDirection = false,
     AssetBundle? bundle,
-    String? package,
+    String? package${if (packageName != null) " = package" else ""},
     double? width,
     double? height,
     BoxFit fit = BoxFit.contain,
@@ -728,7 +740,7 @@ class SvgGenImage {
     );
   }
 
-  String get path => _assetName;
+  String get path => $pathGetter;
 
   String get keyName => _assetName;
 }
@@ -743,6 +755,7 @@ class LottieGenImage {
   const LottieGenImage(this._assetName);
 
   final String _assetName;
+$packageDecl
 
 """.trimIndent()
         )
@@ -768,7 +781,7 @@ class LottieGenImage {
     double? height,
     BoxFit? fit,
     AlignmentGeometry? alignment,
-    String? package,
+    String? package${if (packageName != null) " = package" else ""},
     bool? addRepaintBoundary,
     FilterQuality? filterQuality,
     WarningCallback? onWarning,
@@ -814,7 +827,7 @@ class LottieGenImage {
     );
   }
 
-  String get path => _assetName;
+  String get path => $pathGetter;
 
   String get keyName => _assetName;
 }
