@@ -7,6 +7,7 @@ enum class MediaType {
     IMAGE,
     SVG,
     LOTTIE,
+    RIVE,
     UNKNOWN,
     DIRECTORY
 }
@@ -219,6 +220,7 @@ object AssetTreeBuilder {
             imageExtensions.contains(ext) -> MediaType.IMAGE
             ext == "svg" -> MediaType.SVG
             ext == "lottie" -> MediaType.LOTTIE
+            ext == "riv" -> MediaType.RIVE
             ext == "json" -> if (isLottieFile(file)) MediaType.LOTTIE else MediaType.UNKNOWN
             else -> MediaType.UNKNOWN
         }

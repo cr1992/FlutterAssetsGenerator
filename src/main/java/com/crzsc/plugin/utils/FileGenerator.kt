@@ -90,17 +90,21 @@ class FileGenerator(private val project: Project) {
             // 2. 依赖检查
             val hasSvg = traverseFindType(rootNode, MediaType.SVG)
             val hasLottie = traverseFindType(rootNode, MediaType.LOTTIE)
+            val hasRive = traverseFindType(rootNode, MediaType.RIVE)
 
             val pubspecFile = config.pubRoot.pubspec
             var hasSvgDep = DependencyHelper.hasDependency(project, pubspecFile, "flutter_svg")
             var hasLottieDep = DependencyHelper.hasDependency(project, pubspecFile, "lottie")
+            var hasRiveDep = DependencyHelper.hasDependency(project, pubspecFile, "rive")
 
             // 检测 Flutter 版本 (IO / Process)
             val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
 
             val depsToAdd = mutableMapOf<String, String>()
 
-            if (FileHelperNew.isAutoDetectionEnable(config)) {
+            if (FileHelperNew.isAutoDetectionEnable(config) &&
+                FileHelperNew.isAutoAddDependenciesEnable(config)
+            ) {
                 if (hasSvg && !hasSvgDep) {
                     val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
                     depsToAdd["flutter_svg"] = svgVersion
@@ -111,11 +115,26 @@ class FileGenerator(private val project: Project) {
                     depsToAdd["lottie"] = lottieVersion
                     hasLottieDep = true
                 }
+                if (hasRive && !hasRiveDep) {
+                    val riveVersion = DependencyVersionSelector.getRiveVersion(flutterVersion)
+                    depsToAdd["rive"] = riveVersion
+                    hasRiveDep = true
+                }
             }
 
             // 3. 生成代码 (Generate Code)
             val content =
-                DartClassGenerator(rootNode, config, hasSvgDep, hasLottieDep, flutterVersion)
+                DartClassGenerator(
+                    rootNode,
+                    config,
+                    hasSvg,
+                    hasSvgDep,
+                    hasLottie,
+                    hasLottieDep,
+                    hasRive,
+                    hasRiveDep,
+                    flutterVersion
+                )
                     .generate()
 
             GenerationData(content, depsToAdd, flutterVersion)

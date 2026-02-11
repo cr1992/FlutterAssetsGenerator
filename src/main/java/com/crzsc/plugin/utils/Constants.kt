@@ -13,6 +13,9 @@ object Constants {
     /** 是否自动检测 */
     const val KEY_AUTO_DETECTION = "auto_detection"
 
+    /** 是否自动添加依赖 */
+    const val KEY_AUTO_ADD_DEPENDENCIES = "auto_add_dependencies"
+
     /** 是否启用 package 参数 (生成 package: 'package_name') */
     const val KEY_PACKAGE_PARAMETER_ENABLED = "package_parameter_enabled"
 

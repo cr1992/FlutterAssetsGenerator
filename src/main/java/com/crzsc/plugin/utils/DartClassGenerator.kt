@@ -7,9 +7,13 @@ import com.intellij.openapi.diagnostic.Logger
 class DartClassGenerator(
     private val rootNode: AssetNode,
     private val config: ModulePubSpecConfig,
-    private val hasSvg: Boolean, // 项目中是否包含 SVG 文件且有相应依赖
-    private val hasLottie: Boolean, // 项目中是否包含 Lottie 文件且有相应依赖
-    private val flutterVersion: SemanticVersion? // Flutter SDK 版本,用于生成兼容的模板
+    private val hasSvg: Boolean, // Whether SVG files exist
+    private val hasSvgDep: Boolean, // Whether flutter_svg dependency exists
+    private val hasLottie: Boolean, // Whether Lottie files exist
+    private val hasLottieDep: Boolean, // Whether lottie dependency exists
+    private val hasRive: Boolean, // Whether Rive files exist
+    private val hasRiveDep: Boolean, // Whether rive dependency exists
+    private val flutterVersion: SemanticVersion? // Flutter SDK Version
 ) {
     companion object {
         private val LOG = Logger.getInstance(DartClassGenerator::class.java)
@@ -46,13 +50,16 @@ class DartClassGenerator(
 
         // 生成 Imports
         buffer.append("import 'package:flutter/widgets.dart';\n")
-        if (hasSvg) {
+        if (hasSvgDep) {
             buffer.append("import 'package:flutter_svg/flutter_svg.dart';\n")
         }
-        if (hasLottie) {
+        if (hasLottieDep) {
             buffer.append("import 'package:lottie/lottie.dart';\n")
             buffer.append("import 'package:lottie/src/lottie_builder.dart';\n")
             buffer.append("import 'package:lottie/src/composition.dart';\n")
+        }
+        if (hasRiveDep) {
+            buffer.append("import 'package:rive/rive.dart' hide Image;\n")
         }
         buffer.append("\n")
 
@@ -305,6 +312,12 @@ class DartClassGenerator(
                         )
                     }
 
+                    MediaType.RIVE -> {
+                        buffer.append(
+                            "  ${if (isRoot) "static const" else "final"} RiveGenImage $fieldName = ${if (isRoot) "" else "const "}RiveGenImage('$fullPath');\n"
+                        )
+                    }
+
                     else -> {
                         buffer.append(
                             "  ${if (isRoot) "static const" else "final"} String $fieldName = '$fullPath';\n"
@@ -512,6 +525,12 @@ class DartClassGenerator(
                         )
                     }
 
+                    MediaType.RIVE -> {
+                        sb.append(
+                            "  final RiveGenImage $fieldName = const RiveGenImage('$fullPath');\n"
+                        )
+                    }
+
                     else -> {
                         sb.append("  final String $fieldName = '$fullPath';\n")
                     }
@@ -622,9 +641,10 @@ $packageDecl
         )
         buffer.append("\n\n")
 
-        // SvgGenImage
-        buffer.append(
-            """
+        if (hasSvg) {
+            // SvgGenImage
+            buffer.append(
+                """
 class SvgGenImage {
   const SvgGenImage(this._assetName);
 
@@ -632,20 +652,20 @@ class SvgGenImage {
 $packageDecl
 
 """.trimIndent()
-        )
+            )
 
-        if (hasSvg) {
-            // 判断是否使用 flutter_svg 2.0+ (Flutter >= 2.5.0 时使用 flutter_svg 2.0+)
-            val useFlutterSvg2 =
-                flutterVersion != null && flutterVersion >= SemanticVersion(2, 5, 0)
+            if (hasSvgDep) {
+                // 判断是否使用 flutter_svg 2.0+ (Flutter >= 2.5.0 时使用 flutter_svg 2.0+)
+                val useFlutterSvg2 =
+                    flutterVersion != null && flutterVersion >= SemanticVersion(2, 5, 0)
 
-            if (useFlutterSvg2) {
-                // flutter_svg 2.0+: 移除已废弃的 color/colorBlendMode/cacheColorFilter 参数
-                LOG.info(
-                    "[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 2.x compatible template"
-                )
-                buffer.append(
-                    """
+                if (useFlutterSvg2) {
+                    // flutter_svg 2.0+: 移除已废弃的 color/colorBlendMode/cacheColorFilter 参数
+                    LOG.info(
+                        "[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 2.x compatible template"
+                    )
+                    buffer.append(
+                        """
   SvgPicture svg({
     Key? key,
     bool matchTextDirection = false,
@@ -681,14 +701,14 @@ $packageDecl
     );
   }
 """.trimIndent()
-                )
-            } else {
-                // flutter_svg 1.x: 保留 color/colorBlendMode/cacheColorFilter 参数
-                LOG.info(
-                    "[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 1.x compatible template"
-                )
-                buffer.append(
-                    """
+                    )
+                } else {
+                    // flutter_svg 1.x: 保留 color/colorBlendMode/cacheColorFilter 参数
+                    LOG.info(
+                        "[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 1.x compatible template"
+                    )
+                    buffer.append(
+                        """
   SvgPicture svg({
     Key? key,
     bool matchTextDirection = false,
@@ -730,12 +750,12 @@ $packageDecl
     );
   }
 """.trimIndent()
-                )
+                    )
+                }
             }
-        }
 
-        buffer.append(
-            """
+            buffer.append(
+                """
 
   Widget custom({
     Key? key,
@@ -752,12 +772,14 @@ $packageDecl
   String get keyName => _assetName;
 }
 """.trimIndent()
-        )
-        buffer.append("\n\n")
+            )
+            buffer.append("\n\n")
+        }
 
-        // LottieGenImage
-        buffer.append(
-            """
+        if (hasLottie) {
+            // LottieGenImage
+            buffer.append(
+                """
 class LottieGenImage {
   const LottieGenImage(this._assetName);
 
@@ -765,11 +787,11 @@ class LottieGenImage {
 $packageDecl
 
 """.trimIndent()
-        )
+            )
 
-        if (hasLottie) {
-            buffer.append(
-                """
+            if (hasLottieDep) {
+                buffer.append(
+                    """
   LottieBuilder lottie({
     Animation<double>? controller,
     bool? animate,
@@ -819,11 +841,11 @@ $packageDecl
     );
   }
 """.trimIndent()
-            )
-        }
+                )
+            }
 
-        buffer.append(
-            """
+            buffer.append(
+                """
   Widget custom({
     Key? key,
     required Widget Function(BuildContext context, String assetPath) builder,
@@ -839,7 +861,77 @@ $packageDecl
   String get keyName => _assetName;
 }
 """.trimIndent()
-        )
+            )
+            buffer.append("\n\n")
+        }
+
+        if (hasRive) {
+            // RiveGenImage
+            buffer.append(
+                """
+class RiveGenImage {
+  const RiveGenImage(this._assetName);
+
+  final String _assetName;
+$packageDecl
+
+""".trimIndent()
+            )
+
+            if (hasRiveDep) {
+                buffer.append(
+                    """
+  RiveAnimation rive({
+    String? artboard,
+    List<String> animations = const [],
+    List<String> stateMachines = const [],
+    BoxFit? fit,
+    Alignment? alignment,
+    Widget? placeHolder,
+    bool antialiasing = true,
+    bool useArtboardSize = false,
+    Rect? clipRect,
+    List<RiveAnimationController> controllers = const [],
+    OnInitCallback? onInit,
+    RiveHitTestBehavior behavior = RiveHitTestBehavior.opaque,
+    ObjectGenerator? objectGenerator,
+    double speedMultiplier = 1,
+    Key? key,
+  }) {
+    return RiveAnimation.asset(
+      path,
+      artboard: artboard,
+      animations: animations,
+      stateMachines: stateMachines,
+      fit: fit,
+      alignment: alignment,
+      placeHolder: placeHolder,
+      antialiasing: antialiasing,
+      useArtboardSize: useArtboardSize,
+      clipRect: clipRect,
+      controllers: controllers,
+      onInit: onInit,
+      behavior: behavior,
+      objectGenerator: objectGenerator,
+      speedMultiplier: speedMultiplier,
+      key: key,
+    );
+  }
+""".trimIndent()
+                )
+            }
+
+            buffer.append(
+                """
+
+  String get path => $pathGetter;
+
+  String get keyName => _assetName;
+}
+""".trimIndent()
+            )
+            buffer.append("\n\n")
+        }
     }
 
     // 生成安全的变量名 (驼峰命名,处理关键词冲突和特殊字符)

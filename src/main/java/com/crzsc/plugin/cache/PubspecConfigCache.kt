@@ -21,6 +21,7 @@ data class PubspecConfig(
 
     // 插件自定义配置
     val autoDetection: Boolean,
+    val autoAddDependencies: Boolean,
     val outputDir: String,
     val className: String,
     val outputFilename: String,
@@ -54,6 +55,7 @@ data class PubspecConfig(
             // 读取插件配置
             val pluginConfig = data["flutter_assets_generator"] as? Map<*, *>
             val autoDetection = pluginConfig?.get("auto_detection") as? Boolean ?: false
+            val autoAddDependencies = pluginConfig?.get("auto_add_dependencies") as? Boolean ?: true
             val outputDir = pluginConfig?.get("output_dir") as? String ?: "generated"
             val className = pluginConfig?.get("class_name") as? String ?: "Assets"
             val outputFilename = pluginConfig?.get("output_filename") as? String ?: "assets"
@@ -75,6 +77,7 @@ data class PubspecConfig(
                 flutterVersion = flutterVersion,
                 dartVersion = dartVersion,
                 autoDetection = autoDetection,
+                autoAddDependencies = autoAddDependencies,
                 outputDir = outputDir,
                 className = className,
                 outputFilename = outputFilename,
@@ -182,6 +185,7 @@ object PubspecConfigCache {
     private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
         return old.assetPaths != new.assetPaths ||
                 old.autoDetection != new.autoDetection ||
+                old.autoAddDependencies != new.autoAddDependencies ||
                 old.outputDir != new.outputDir ||
                 old.className != new.className ||
                 old.outputFilename != new.outputFilename ||
@@ -227,6 +231,11 @@ object PubspecConfigCache {
         if (old.autoDetection != new.autoDetection) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}] auto_detection changed: ${old.autoDetection} -> ${new.autoDetection}"
+            )
+        }
+        if (old.autoAddDependencies != new.autoAddDependencies) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] auto_add_dependencies changed: ${old.autoAddDependencies} -> ${new.autoAddDependencies}"
             )
         }
         if (old.generationStyle != new.generationStyle) {

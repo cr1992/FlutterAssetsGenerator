@@ -142,6 +142,11 @@ object FileHelperNew {
         return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean? ?: true
     }
 
+    /** 是否开启了自动添加依赖 */
+    fun isAutoAddDependenciesEnable(config: ModulePubSpecConfig): Boolean {
+        return readSetting(config, Constants.KEY_AUTO_ADD_DEPENDENCIES) as Boolean? ?: true
+    }
+
     /** 是否开启了 package 参数生成 */
     fun isPackageParameterEnabled(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_PACKAGE_PARAMETER_ENABLED) as Boolean? ?: false
@@ -170,6 +175,7 @@ object FileHelperNew {
     /** 读取忽略文件目录 */
     fun getPathIgnore(config: ModulePubSpecConfig): List<String> {
         return try {
+            @Suppress("UNCHECKED_CAST")
             val paths = readSetting(config, Constants.PATH_IGNORE) as List<String>? ?: emptyList()
             paths
         } catch (e: Exception) {

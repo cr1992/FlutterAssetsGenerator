@@ -49,10 +49,7 @@ class SetupProjectAction : AnAction() {
      * 向 pubspec.yaml 添加默认配置
      * @return true 如果成功添加配置，false 如果配置已存在
      */
-    private fun addDefaultConfiguration(
-        project: Project,
-        config: ModulePubSpecConfig
-    ): Boolean {
+    private fun addDefaultConfiguration(project: Project, config: ModulePubSpecConfig): Boolean {
         val pubspecFile = config.pubRoot.pubspec
         val yamlFile =
             PsiManager.getInstance(project).findFile(pubspecFile) as? YAMLFile ?: return false
@@ -76,8 +73,11 @@ class SetupProjectAction : AnAction() {
                   output_filename: assets
                   class_name: Assets
                   auto_detection: true
+                  # Automatically add missing dependencies (rive, flutter_svg, lottie) default: true
+                  auto_add_dependencies: true
                   # Options: robust (default), legacy (old style)
                   style: robust
+                  package_parameter_enabled: false
                   path_ignore: []
             """.trimIndent()
 
