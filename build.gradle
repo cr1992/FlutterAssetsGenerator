@@ -63,7 +63,7 @@ intellij {
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
     version = properties("pluginVersion")
-    path = "${project.projectDir}/CHANGELOG.md"
+    path = "${project.projectDir}/doc/CHANGELOG.md"
 //    header = "[${-> version.get()}] - ${new SimpleDateFormat("yyyy-MM-dd").format(new Date())}"
 //    headerParserRegex = ~/(\d+\.\d+)/
 //    itemPrefix = "-"
@@ -86,7 +86,7 @@ patchPluginXml {
     // Load plugin description from dedicated file and convert to HTML
     // This follows JetBrains recommended practice for plugin descriptions
     pluginDescription = provider {
-        def descriptionFile = project.file("PLUGIN_DESCRIPTION.md")
+        def descriptionFile = project.file("doc/PLUGIN_DESCRIPTION.md")
         def descriptionContent = descriptionFile.exists() ? descriptionFile.text : ""
         
         // Convert to HTML using CommonMark
