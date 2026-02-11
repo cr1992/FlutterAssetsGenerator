@@ -12,9 +12,9 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
 - **Multi-Module Support**: Seamlessly supports nested Flutter modules and monorepos (e.g. `example/` or `packages/`).
 - **Legacy Compatibility**: Supports `style: legacy` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
-- **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
-- **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects.
-- **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies.
+- **Smart Type Support**: Automatically detects `SVG`, `Lottie` and `Rive` files.
+- **Widget Integration**: Generates `.svg()`, `.lottie()` and `.rive()` methods directly on asset objects.
+- **Auto Dependency Management**: Automatically checks and adds `flutter_svg`, `lottie` or `rive` dependencies.
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
@@ -36,7 +36,9 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
+  auto_add_dependencies: true
   style: robust # Options: robust (default), legacy (legacy)
+  package_parameter_enabled: false
   path_ignore: []
 ```
 
@@ -54,6 +56,8 @@ flutter_assets_generator:
   class_name: Assets
   # Enable/Disable auto monitoring and dependency management. Default: true
   auto_detection: true
+  # Add dependencies to pubspec.yaml automatically. Default: true
+  auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
   # Ignore specific paths. Default: []
@@ -80,6 +84,9 @@ Assets.icons.home.svg(color: Colors.blue);
 // Lottie (Requires lottie dependency)
 Assets.anim.loading.lottie(repeat: true);
 
+// Rive (Requires rive dependency)
+Assets.anims.input.rive(fit: BoxFit.contain);
+
 // Custom widget builder - allows you to build any widget with the asset path
 Assets.images.logo.custom(
   builder: (context, assetPath) {
@@ -103,9 +110,9 @@ String path = Assets.images.logo.path;
 -   **分层生成**：根据目录结构生成对应的嵌套类，精确反映资源层级（例如 `Assets.images.logo`）。
 -   **多模块支持**：完美支持嵌套的 Flutter 模块和 Monorepo 项目结构（如 `example/` 或 `packages/`）。
 -   **旧版兼容**：支持 `style: legacy` 以生成扁平变量名 (例如 `Assets.imagesLogo`)，方便迁移。
--   **智能类型支持**：自动识别 `SVG` 和 `Lottie` 动画文件。
--   **Widget 集成**：直接在资源对象上生成 `.svg()` 和 `.lottie()` 方法。
--   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg` 或 `lottie`。
+-   **智能类型支持**：自动识别 `SVG`, `Lottie` 和 `Rive` 文件。
+-   **Widget 集成**：直接在资源对象上生成 `.svg()`, `.lottie()` 和 `.rive()` 方法。
+-   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg`, `lottie` 或 `rive`。
 -   **智能自动更新**：
     -   **资源文件**: 监听图片文件增删，自动重新生成。
     -   **配置文件**: 监听 `pubspec.yaml` 的**保存**动作 (Cmd+S)。智能 Diff 算法确保只在配置真正变化时构建。
@@ -127,10 +134,12 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
+  auto_add_dependencies: true
   # 生成风格: robust (默认), legacy (旧版兼容)
   # robust: 分层级风格 (Assets.images.logo)
   # legacy: 扁平风格 (Assets.imagesLogo)
   style: robust
+  package_parameter_enabled: false
   path_ignore: []
 ```
 
@@ -150,6 +159,8 @@ flutter_assets_generator:
   class_name: Assets
   # 是否开启自动监测和依赖管理。默认: true
   auto_detection: true
+  # 是否自动添加依赖到 pubspec.yaml。默认: true
+  auto_add_dependencies: true
   # 生成风格: robust (分层级) 或 legacy (旧版扁平)。默认: robust
   style: robust
   # 忽略的路径。默认: []
@@ -175,6 +186,9 @@ Assets.icons.home.svg(color: Colors.blue);
 
 // Lottie (返回 LottieBuilder Widget)
 Assets.anim.loading.lottie(repeat: true);
+
+// Rive (返回 RiveAnimation Widget)
+Assets.anims.input.rive(fit: BoxFit.contain);
 
 // 自定义 Widget 构建器 - 允许您使用资源路径构建任何 Widget
 Assets.images.logo.custom(

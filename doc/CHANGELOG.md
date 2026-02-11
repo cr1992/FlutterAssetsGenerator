@@ -1,6 +1,15 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 [//]: # (# FlutterAssetsGenerator Changelog)
+## [3.1.0]
+### Added / 新增
+- **Rive Support**: Added support for `.rive` files and `rive` dependency automation.
+  - **Rive 支持**: 新增对 `.rive` 文件及 `rive` 依赖自动化的支持。
+- **Submodule Support**: Fixed `flutter pub get` execution context for submodules.
+  - **子模块支持**: 修复了子模块中 `flutter pub get` 的执行上下文问题，确保在正确的目录执行。
+- **Auto Dependencies Config**: Added `auto_add_dependencies` config to control automatic dependency injection.
+  - **自动依赖配置**: 新增 `auto_add_dependencies` 配置，用于控制是否自动添加依赖。
+
 ## [3.0.0]
 ### BREAKING CHANGES / 重大变更
 - **Default Generation Style**: The default generated code is now **hierarchical** (e.g., `Assets.images.logo`) instead of flat. To restore the old flat behavior, add `style: legacy` to your `plugin` config in `pubspec.yaml`.

@@ -1,9 +1,9 @@
 # Flutter Assets Generator 3.0.0 技术方案详述
 
-> **文档版本**: `cca3549` - 异步生成与性能优化 (2026-02-06)  
-> **最后更新**: 2026-02-06
+> **文档版本**: `b2b916c` - Rive 支持与子模块优化 (2026-02-11)
+> **最后更新**: 2026-02-11
 
-本文档详细描述了 Flutter Assets Generator 插件 (v3.0.0) 的技术架构、核心流程与关键实现细节。
+本文档详细描述了 Flutter Assets Generator 插件 (v3.1.0) 的技术架构、核心流程与关键实现细节。
 
 ## 1. 架构概览 (Architecture Overview)
 
@@ -164,7 +164,7 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
 *   **`generateRobust()` (v3.0 默认)**:
     *   生成分层级的类结构。
     *   为每个图片资源生成 `AssetGenImage` 对象实例。
-    *   集成 `.svg()` (若依赖 `flutter_svg`) 和 `.lottie()` (若依赖 `lottie`) 方法。
+    *   集成 `.svg()` (若依赖 `flutter_svg`)、`.lottie()` (若依赖 `lottie`) 和 `.rive()` (若依赖 `rive`) 方法。
 *   **`generateLegacy()` (兼容模式)**:
     *   生成扁平化的 `static const String` 字段。
     *   生成的变量名使用 `camelCase` 风格 (例如 `assetsImagesLogo`)。
@@ -208,14 +208,17 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
 ### 4.1 自动依赖管理 (DependencyHelper)
 **类路径**: `src/main/java/com/crzsc/plugin/utils/DependencyHelper.kt`
 
-插件不只是生成代码,还是一个"智能助手"。在扫描资源树时,如果发现 `.svg` 或 `.json` (Lottie) 文件,会置位标志 `hasSvg` / `hasLottie`。
-在生成结束后,如果 `auto_detection` 开启,插件会检查 `pubspec.yaml` 的 `dependencies` 节点。如果缺少 `flutter_svg` 或 `lottie`,会自动插入依赖。
+插件不只是生成代码,还是一个"智能助手"。在扫描资源树时,如果发现 `.svg`、`.json` (Lottie) 或 `.riv` (Rive) 文件,会置位标志 `hasSvg` / `hasLottie` / `hasRive`。
+在生成结束后,如果 `auto_detection` 开启,插件会检查 `pubspec.yaml` 的 `dependencies` 节点。如果缺少 `flutter_svg`、`lottie` 或 `rive`,会自动插入依赖。
 
 **关键特性**:
 *   **统一日志系统**: 所有依赖管理操作均通过 `Logger` 输出详细日志,标签为 `[FlutterAssetsGenerator #DependencyHelper]`,便于问题追踪。
-*   **双重执行机制**: 
-    *   **方案A (优先)**: 使用 Flutter 插件原生 API `FlutterSdk.startPubGet()`,提供原生 UI 进度提示。
-    *   **方案B (降级)**: 当 Flutter SDK 未配置或原生方法不可用时,降级到 CLI 执行 `flutter pub get`,确保功能可用性。
+*   **双重执行机制 (Context-Aware Execution)**:
+    *   **上下文感知**: 在执行 `pub get` 前，会校验 `PubRoot` 是否严格匹配当前 `pubspec.yaml` 所在目录。
+    *   **方案A (优先)**: 当 Flutter Plugin 可以正确识别当前模块上下文时，使用 `FlutterSdk.startPubGet()`，提供原生 UI 进度提示。
+    *   **方案B (降级/子模块)**: 当处于子模块（Submodule）或嵌套工程中，且 Flutter Plugin 误将上下文识别为根工程时，自动降级为 CLI 执行。
+        *   显式指定 `workDirectory` 为子模块目录。
+        *   这解决了在 Monorepo 或 Git Submodule 结构中，`pub get` 错误地在根目录执行导致依赖解析失败的问题。
 *   **文档同步保存**: 在修改 `pubspec.yaml` 后,强制调用 `FileDocumentManager.saveDocument()`,确保磁盘文件与内存一致后再执行 `pub get`。
 
 ### 4.2 性能优化 (Performance Optimizations)
@@ -277,8 +280,10 @@ private val NOTIFICATION_GROUP = NotificationGroup(
 private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
     return old.assetPaths != new.assetPaths ||
            old.autoDetection != new.autoDetection ||
+           old.autoAddDependencies != new.autoAddDependencies ||
+           old.packageParameterEnabled != new.packageParameterEnabled ||
            // ... 其他配置字段
-           // 故意忽略 flutterSvgVersion, lottieVersion
+           // 故意忽略 flutterSvgVersion, lottieVersion, riveVersion
 }
 ```
 

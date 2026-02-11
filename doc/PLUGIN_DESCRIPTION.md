@@ -5,9 +5,9 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
 - **Multi-Module Support**: Seamlessly supports nested Flutter modules and monorepos (e.g. `example/` or `packages/`).
 - **Legacy Compatibility**: Supports `style: legacy` to generate flat variable names (e.g. `Assets.imagesLogo`) for easy migration.
-- **Smart Type Support**: Automatically detects `SVG` and `Lottie` files.
-- **Widget Integration**: Generates `.svg()` and `.lottie()` methods directly on asset objects.
-- **Auto Dependency Management**: Automatically checks and adds `flutter_svg` or `lottie` dependencies.
+- **Smart Type Support**: Automatically detects `SVG`, `Lottie` and `Rive` files.
+- **Widget Integration**: Generates `.svg()`, `.lottie()` and `.rive()` methods directly on asset objects.
+- **Auto Dependency Management**: Automatically checks and adds `flutter_svg`, `lottie` or `rive` dependencies.
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
@@ -30,7 +30,9 @@ flutter_assets_generator:
   output_filename: assets
   class_name: Assets
   auto_detection: true
+  auto_add_dependencies: true
   style: robust # Options: robust (default), legacy (legacy)
+  package_parameter_enabled: false
   path_ignore: []
 ```
 
@@ -48,6 +50,8 @@ flutter_assets_generator:
   package_parameter_enabled: false
   # Enable/Disable auto monitoring and dependency management. Default: true
   auto_detection: true
+  # Add dependencies to pubspec.yaml automatically. Default: true
+  auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
   # Ignore specific paths. Default: []
