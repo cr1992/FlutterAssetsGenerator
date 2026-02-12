@@ -10,6 +10,10 @@
 - **Auto Dependencies Config**: Added `auto_add_dependencies` config to control automatic dependency injection.
   - **自动依赖配置**: 新增 `auto_add_dependencies` 配置，用于控制是否自动添加依赖。
 
+### Fixed / 修复
+- **Diacritic Handling**: Automatically remove diacritics from filenames to generate valid ASCII Dart variable names (e.g., `crème` -> `creme`).
+  - **变音符号处理**: 自动移除文件名中的变音符号，确保生成合法的 ASCII Dart 变量名 (例如 `crème` -> `creme`)。
+
 ## [3.0.0]
 ### BREAKING CHANGES / 重大变更
 - **Default Generation Style**: The default generated code is now **hierarchical** (e.g., `Assets.images.logo`) instead of flat. To restore the old flat behavior, add `style: legacy` to your `plugin` config in `pubspec.yaml`.
