@@ -2,6 +2,7 @@ package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
 import com.intellij.openapi.diagnostic.Logger
+import java.text.Normalizer
 
 /** Dart 代码生成器 负责将资源树转换为 Dart 类结构 */
 class DartClassGenerator(
@@ -936,9 +937,14 @@ $packageDecl
 
     // 生成安全的变量名 (驼峰命名,处理关键词冲突和特殊字符)
     private fun getSafeName(name: String): String {
-        // 过滤特殊字符:空格、括号、引号等,替换为下划线
+        // 1. Remove Diacritics
+        val normalized = Normalizer.normalize(name, Normalizer.Form.NFD)
+        val withoutDiacritics = normalized.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+
+        // 2. Filter special characters (existing logic)
         val filtered =
-            name.replace(Regex("[\\s()\\[\\]{}'\"`!@#$%^&*+=|\\\\:;,<>?/]"), "_")
+            withoutDiacritics
+                .replace(Regex("[\\s()\\[\\]{}'\"`!@#$%^&*+=|\\\\:;,<>?/]"), "_")
                 .replace(Regex("_+"), "_") // 将连续的下划线替换为单个
                 .trim('_') // 移除首尾的下划线
 
