@@ -19,6 +19,9 @@ object Constants {
     /** 是否启用 package 参数 (生成 package: 'package_name') */
     const val KEY_PACKAGE_PARAMETER_ENABLED = "package_parameter_enabled"
 
+    /** 是否在 legacy 样式中使用父目录作为变量名前缀 (默认 true) */
+    const val KEY_NAMED_WITH_PARENT = "named_with_parent"
+
     /** 输出的文件名 */
     const val KEY_OUTPUT_FILENAME = "output_filename"
 

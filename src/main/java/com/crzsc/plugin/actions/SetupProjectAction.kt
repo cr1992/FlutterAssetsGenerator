@@ -78,6 +78,7 @@ class SetupProjectAction : AnAction() {
                   # Options: robust (default), legacy (old style)
                   style: robust
                   package_parameter_enabled: false
+                  named_with_parent: true
                   path_ignore: []
             """.trimIndent()
 

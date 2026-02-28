@@ -167,7 +167,7 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
     *   集成 `.svg()` (若依赖 `flutter_svg`)、`.lottie()` (若依赖 `lottie`) 和 `.rive()` (若依赖 `rive`) 方法。
 *   **`generateLegacy()` (兼容模式)**:
     *   生成扁平化的 `static const String` 字段。
-    *   生成的变量名使用 `camelCase` 风格 (例如 `assetsImagesLogo`)。
+    *   **命名策略**: 结合 `named_with_parent` 选项（默认开启），生成形如 `[父目录][父级父目录][文件名]` 的驼峰层级变量名，例如 `assets/images/logo.png` 会生成 `imagesLogo`。这种回退策略可以避免大量同名文件在扁平结构中冲突。
 *   **`getSafeName(name: String)` (统一命名算法)**:
     *   处理所有非法字符（空格、`-`、`@` 等）。
     *   处理 Dart 关键字冲突（如 `do`, `if` -> `kDo`, `kIf`）。

@@ -60,6 +60,8 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
+  # For legacy style: Prefix variable names with parent directory names. Default: true
+  named_with_parent: true
   # Ignore specific paths. Default: []
   path_ignore: ["assets/fonts"]
 ```
@@ -163,6 +165,8 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # 生成风格: robust (分层级) 或 legacy (旧版扁平)。默认: robust
   style: robust
+  # 旧版兼容风格: 将变量名以父级目录名为前缀。默认: true
+  named_with_parent: true
   # 忽略的路径。默认: []
   path_ignore: ["assets/fonts"]
 ```

@@ -152,6 +152,11 @@ object FileHelperNew {
         return readSetting(config, Constants.KEY_PACKAGE_PARAMETER_ENABLED) as Boolean? ?: false
     }
 
+    /** 是否在 legacy 样式中使用父目录作为变量名前缀 */
+    fun isNamedWithParent(config: ModulePubSpecConfig): Boolean {
+        return readSetting(config, Constants.KEY_NAMED_WITH_PARENT) as Boolean? ?: true
+    }
+
     /** 读取生成的类名配置 */
     fun getGeneratedClassName(config: ModulePubSpecConfig): String {
         return readSetting(config, Constants.KEY_CLASS_NAME) as String?

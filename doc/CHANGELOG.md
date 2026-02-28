@@ -3,6 +3,8 @@
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [3.1.0]
 ### Added / 新增
+- **Legacy Naming**: Added `named_with_parent` option for `legacy` style to restore old directory-prefixed variable naming (e.g., `imagesBtnLogo`).
+  - **遗留命名兼容**: 为 `legacy` 风格新增 `named_with_parent` 配置项，彻底还原旧版的带目录前缀变量名生成逻辑 (例如 `imagesBtnLogo`)。
 - **Rive Support**: Added support for `.rive` files and `rive` dependency automation.
   - **Rive 支持**: 新增对 `.rive` 文件及 `rive` 依赖自动化的支持。
 - **Submodule Support**: Fixed `flutter pub get` execution context for submodules.

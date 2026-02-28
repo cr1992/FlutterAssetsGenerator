@@ -122,6 +122,7 @@ class DartClassGenerator(
         val allFiles = mutableListOf<AssetNode>()
         collectFiles(rootNode, allFiles)
 
+        val isNamedWithParent = FileHelperNew.isNamedWithParent(config)
         val nameMap = mutableMapOf<String, Int>()
 
         // 使用统一的特殊字符处理逻辑
@@ -132,14 +133,29 @@ class DartClassGenerator(
             // 注意: getSafeName 内部已经处理了 keywords 和 camelCase 转换
             var assetName = getSafeName(file.name)
 
-            // 简单的重名处理 (数字后缀)
-            if (nameMap.containsKey(assetName)) {
-                val count = nameMap[assetName]!! + 1
-                nameMap[assetName] = count
-                assetName = "${assetName}${count}"
-            } else {
-                nameMap[assetName] = 1
+            if (isNamedWithParent) {
+                file.virtualFile?.parent?.let { parent ->
+                    val parentName = getSafeName(parent.name)
+                    assetName = "${parentName}${assetName.replaceFirstChar { it.uppercase() }}"
+
+                    if (nameMap.containsKey(assetName)) {
+                        parent.parent?.let { parentParent ->
+                            val parentParentName = getSafeName(parentParent.name)
+                            assetName =
+                                "${parentParentName}${assetName.replaceFirstChar { it.uppercase() }}"
+                        }
+                    }
+                }
             }
+
+            // 简单的重名处理 (数字后缀)
+            var finalName = assetName
+            var counter = 1
+            while (nameMap.containsKey(finalName)) {
+                finalName = "${assetName}${counter}"
+                counter++
+            }
+            nameMap[finalName] = 1
 
             var fullPath = "$prefix${file.path}"
             val isPackageParameterEnabled = FileHelperNew.isPackageParameterEnabled(config)

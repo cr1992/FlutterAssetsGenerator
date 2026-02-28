@@ -54,8 +54,10 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
+  # For legacy style: Prefix variable names with parent directory names. Default: true
+  named_with_parent: true
   # Ignore specific paths. Default: []
-  path_ignore: ["assets/fonts"]
+  path_ignore: []
 ```
 
 ### 3. Generate File
