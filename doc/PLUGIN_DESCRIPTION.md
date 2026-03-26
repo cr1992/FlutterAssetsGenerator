@@ -8,6 +8,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Type Support**: Automatically detects `SVG`, `Lottie` and `Rive` files.
 - **Widget Integration**: Generates `.svg()`, `.lottie()` and `.rive()` methods directly on asset objects.
 - **Auto Dependency Management**: Automatically checks and adds `flutter_svg`, `lottie` or `rive` dependencies.
+- **YAML as Source of Truth**: In 3.x, behavior is driven by `pubspec.yaml`. Modules without `flutter_assets_generator` config are not watched or generated automatically.
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
@@ -26,12 +27,14 @@ This will automatically add the default configuration to your `pubspec.yaml`:
 
 ```yaml
 flutter_assets_generator:
+  enable: true
   output_dir: lib/generated/
   output_filename: assets
   class_name: Assets
   auto_detection: true
   auto_add_dependencies: true
   style: robust # Options: robust (default), legacy (legacy)
+  name_style: camel # Options: camel (default), snake
   package_parameter_enabled: false
   path_ignore: []
 ```
@@ -40,6 +43,8 @@ flutter_assets_generator:
 
 ```yaml
 flutter_assets_generator:
+  # Enable/Disable this plugin for the current module. Default: true when the block exists
+  enable: true
   # Sets the directory of generated files. Default: lib/generated
   output_dir: lib/generated/
   # Sets the name for the generated file. Default: assets
@@ -54,11 +59,15 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
+  # Name style for generated identifiers. Default: camel
+  name_style: camel
   # For legacy style: Prefix variable names with parent directory names. Default: true
   named_with_parent: true
   # Ignore specific paths. Default: []
   path_ignore: []
 ```
+
+Modules without a `flutter_assets_generator` block are not monitored automatically. If you run `Generate Assets` before initialization, the plugin will ask you to run `Setup Project Configuration` first.
 
 ### 3. Generate File
 

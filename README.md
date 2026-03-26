@@ -15,6 +15,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Type Support**: Automatically detects `SVG`, `Lottie` and `Rive` files.
 - **Widget Integration**: Generates `.svg()`, `.lottie()` and `.rive()` methods directly on asset objects.
 - **Auto Dependency Management**: Automatically checks and adds `flutter_svg`, `lottie` or `rive` dependencies.
+- **YAML as Source of Truth**: In 3.x, behavior is driven by `pubspec.yaml`. Modules without `flutter_assets_generator` config are not watched or generated automatically.
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
@@ -32,12 +33,14 @@ This will automatically add the default configuration to your `pubspec.yaml`:
 
 ```yaml
 flutter_assets_generator:
+  enable: true
   output_dir: lib/generated/
   output_filename: assets
   class_name: Assets
   auto_detection: true
   auto_add_dependencies: true
   style: robust # Options: robust (default), legacy (legacy)
+  name_style: camel # Options: camel (default), snake
   package_parameter_enabled: false
   path_ignore: []
 ```
@@ -46,6 +49,8 @@ flutter_assets_generator:
 
 ```yaml
 flutter_assets_generator:
+  # Enable/Disable this plugin for the current module. Default: true when the block exists
+  enable: true
   # Sets the directory of generated files. Default: lib/generated
   output_dir: lib/generated/
   # Sets the name for the generated file. Default: assets
@@ -60,11 +65,15 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
+  # Name style for generated identifiers. Default: camel
+  name_style: camel
   # For legacy style: Prefix variable names with parent directory names. Default: true
   named_with_parent: true
   # Ignore specific paths. Default: []
   path_ignore: ["assets/fonts"]
 ```
+
+Modules without a `flutter_assets_generator` block are not monitored automatically. If you run `Generate Assets` before initialization, the plugin will ask you to run `Setup Project Configuration` first.
 
 #### 3. Generate File
 
@@ -115,6 +124,7 @@ String path = Assets.images.logo.path;
 -   **智能类型支持**：自动识别 `SVG`, `Lottie` 和 `Rive` 文件。
 -   **Widget 集成**：直接在资源对象上生成 `.svg()`, `.lottie()` 和 `.rive()` 方法。
 -   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg`, `lottie` 或 `rive`。
+-   **YAML 单一配置源**：3.x 以后所有行为都以 `pubspec.yaml` 为准。未配置 `flutter_assets_generator` 的模块不会自动监听或生成。
 -   **智能自动更新**：
     -   **资源文件**: 监听图片文件增删，自动重新生成。
     -   **配置文件**: 监听 `pubspec.yaml` 的**保存**动作 (Cmd+S)。智能 Diff 算法确保只在配置真正变化时构建。
@@ -132,6 +142,7 @@ String path = Assets.images.logo.path;
 
 ```yaml
 flutter_assets_generator:
+  enable: true
   output_dir: generated/
   output_filename: assets
   class_name: Assets
@@ -141,6 +152,8 @@ flutter_assets_generator:
   # robust: 分层级风格 (Assets.images.logo)
   # legacy: 扁平风格 (Assets.imagesLogo)
   style: robust
+  # 命名风格: camel (默认) 或 snake
+  name_style: camel
   package_parameter_enabled: false
   path_ignore: []
 ```
@@ -151,6 +164,8 @@ flutter_assets_generator:
 
 ```yaml
 flutter_assets_generator:
+  # 是否启用当前模块的插件能力。存在配置块时默认: true
+  enable: true
   # 生成文件的输出目录。默认: lib/generated
   output_dir: generated/
   # 生成文件的文件名 (无后缀)。默认: assets
@@ -165,11 +180,15 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # 生成风格: robust (分层级) 或 legacy (旧版扁平)。默认: robust
   style: robust
+  # 生成标识符的命名风格。默认: camel
+  name_style: camel
   # 旧版兼容风格: 将变量名以父级目录名为前缀。默认: true
   named_with_parent: true
   # 忽略的路径。默认: []
   path_ignore: ["assets/fonts"]
 ```
+
+如果模块没有 `flutter_assets_generator` 配置块，插件不会自动监听。此时手动执行 `Generate Assets` 会提示先运行 `Setup Project Configuration` 完成初始化。
 
 #### 3. 生成文件
 
