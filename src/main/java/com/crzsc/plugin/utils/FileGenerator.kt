@@ -27,7 +27,7 @@ import org.jetbrains.yaml.psi.YAMLSequence
 class FileGenerator(private val project: Project) {
     companion object {
         private val LOG = Logger.getInstance(FileGenerator::class.java)
-        private const val SETUP_REQUIRED_MESSAGE =
+        internal const val SETUP_REQUIRED_MESSAGE =
             "No enabled flutter_assets_generator modules found. Run 'Setup Project Configuration' first or set enable: true."
     }
 
@@ -35,7 +35,7 @@ class FileGenerator(private val project: Project) {
     /** 为所有模块重新生成 */
     fun generateAll() {
         val assets = getEnabledConfigs()
-        if (assets.isEmpty()) {
+        if (shouldShowSetupPrompt(assets)) {
             showNotify(SETUP_REQUIRED_MESSAGE)
             return
         }
@@ -77,12 +77,20 @@ class FileGenerator(private val project: Project) {
             )
     }
 
-    private fun getEnabledConfigs(): List<ModulePubSpecConfig> {
-        return FileHelperNew.getAssets(project).filter {
+    internal fun filterEnabledConfigs(configs: List<ModulePubSpecConfig>): List<ModulePubSpecConfig> {
+        return configs.filter {
             FileHelperNew.hasPluginConfig(it) &&
                     FileHelperNew.isPluginEnabled(it) &&
                     it.assetVFiles.isNotEmpty()
         }
+    }
+
+    internal fun shouldShowSetupPrompt(configs: List<ModulePubSpecConfig>): Boolean {
+        return configs.isEmpty()
+    }
+
+    private fun getEnabledConfigs(): List<ModulePubSpecConfig> {
+        return filterEnabledConfigs(FileHelperNew.getAssets(project))
     }
 
     private data class GenerationData(

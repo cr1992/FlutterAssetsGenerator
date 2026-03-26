@@ -18,6 +18,13 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
     companion object {
         private val LOG = Logger.getInstance(PubspecDocumentListener::class.java)
+
+        internal fun shouldTriggerGeneration(newConfig: PubspecConfig, hasChanged: Boolean): Boolean {
+            return hasChanged &&
+                    newConfig.hasPluginConfig &&
+                    newConfig.pluginEnabled &&
+                    newConfig.autoDetection
+        }
     }
 
     override fun beforeDocumentSaving(document: Document) {
@@ -61,7 +68,7 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
                     PubspecConfigCache.put(project, modulePath, newConfig)
 
-                    if (!newConfig.hasPluginConfig || !newConfig.pluginEnabled || !newConfig.autoDetection) {
+                    if (!shouldTriggerGeneration(newConfig, hasChanged = true)) {
                         LOG.info(
                             "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Plugin config missing, disabled, or auto_detection off; skipping generation"
                         )

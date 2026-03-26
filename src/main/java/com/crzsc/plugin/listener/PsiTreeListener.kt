@@ -3,6 +3,7 @@ package com.crzsc.plugin.listener
 import com.crzsc.plugin.utils.FileGenerator
 import com.crzsc.plugin.utils.FileHelperNew
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.psi.PsiTreeChangeListener
@@ -51,45 +52,51 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
 
     override fun beforeChildRemoval(event: PsiTreeChangeEvent) {}
 
+    internal fun shouldHandleConfig(config: com.crzsc.plugin.utils.ModulePubSpecConfig): Boolean {
+        return FileHelperNew.hasPluginConfig(config) &&
+                FileHelperNew.isPluginEnabled(config) &&
+                FileHelperNew.isAutoDetectionEnable(config)
+    }
+
+    internal fun isDirectAssetChild(
+        config: com.crzsc.plugin.utils.ModulePubSpecConfig,
+        parentDir: VirtualFile?,
+        changedFile: Any
+    ): Boolean {
+        if (parentDir == null) return false
+        return config.assetVFiles.any { assetFile ->
+            if (assetFile.isDirectory) {
+                assetFile == parentDir
+            } else {
+                assetFile == changedFile
+            }
+        }
+    }
+
     private fun handleEvent(event: PsiTreeChangeEvent) {
         // 注意: pubspec.yaml 的变更现在由 PubspecDocumentListener 处理
         // 这里只监听 assets 目录下的文件变更
 
         val assets = FileHelperNew.getAssets(project)
         for (config in assets) {
-            if (!FileHelperNew.hasPluginConfig(config) ||
-                !FileHelperNew.isPluginEnabled(config) ||
-                !FileHelperNew.isAutoDetectionEnable(config)
-            ) {
+            if (!shouldHandleConfig(config)) {
                 continue
             }
 
             event.child?.let { changedFile ->
                 val parentDir = changedFile.parent.castSafelyTo<PsiDirectory>()?.virtualFile
-                if (parentDir != null) {
-                    for (assetFile in config.assetVFiles) {
-                        // 判断变更文件是否位于配置的 assets 目录下 (严格匹配，不递归)
-                        val isDirectChild =
-                            if (assetFile.isDirectory) {
-                                assetFile == parentDir
-                            } else {
-                                assetFile == changedFile
+                if (isDirectAssetChild(config, parentDir, changedFile)) {
+                    // 资源文件变更响应较快,防抖时间设置为 300ms
+                    alarm.cancelAllRequests()
+                    alarm.addRequest(
+                        {
+                            if (!project.isDisposed) {
+                                fileGenerator.generateOne(config)
                             }
-
-                        if (isDirectChild) {
-                            // 资源文件变更响应较快,防抖时间设置为 300ms
-                            alarm.cancelAllRequests()
-                            alarm.addRequest(
-                                {
-                                    if (!project.isDisposed) {
-                                        fileGenerator.generateOne(config)
-                                    }
-                                },
-                                300
-                            )
-                            return
-                        }
-                    }
+                        },
+                        300
+                    )
+                    return
                 }
             }
         }
