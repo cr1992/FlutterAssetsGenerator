@@ -1,9 +1,11 @@
 package com.crzsc.plugin.test
 
 import com.crzsc.plugin.utils.AssetNode
+import com.crzsc.plugin.utils.Constants
 import com.crzsc.plugin.utils.DartClassGenerator
 import com.crzsc.plugin.utils.MediaType
 import com.crzsc.plugin.utils.ModulePubSpecConfig
+import com.intellij.openapi.vfs.VirtualFile
 import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.Mockito
@@ -179,9 +181,100 @@ class DartClassGeneratorTest {
         )
     }
 
-    private fun createMockConfig(): ModulePubSpecConfig {
-        // Mock ModulePubSpecConfig
+    @Test
+    fun testLegacyCamelStyleKeepsOldNumericPrefixBehavior() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)
+        root.children.add(assetsDir)
+
+        val imagesDirVf = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(imagesDirVf.name).thenReturn("images")
+        val assetsDirVf = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(imagesDirVf.parent).thenReturn(assetsDirVf)
+
+        val fileVf = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(fileVf.parent).thenReturn(imagesDirVf)
+
+        assetsDir.children.add(
+            AssetNode("0", "assets/images/0.png", MediaType.IMAGE, fileVf)
+        )
+
+        val config =
+            createMockConfig(
+                mapOf(
+                    "style" to "legacy",
+                    Constants.KEY_NAME_STYLE to Constants.NAME_STYLE_CAMEL,
+                    Constants.KEY_NAMED_WITH_PARENT to true
+                )
+            )
+
+        val generatedCode =
+            DartClassGenerator(
+                root,
+                config,
+                hasSvg = false,
+                hasSvgDep = false,
+                hasLottie = false,
+                hasLottieDep = false,
+                hasRive = false,
+                hasRiveDep = false,
+                flutterVersion = null
+            )
+                .generate()
+
+        assertTrue(
+            generatedCode.contains(
+                "static const String images0 = 'assets/images/0.png';"
+            )
+        )
+        assertFalse(generatedCode.contains("imagesA0"))
+    }
+
+    @Test
+    fun testSnakeNameStyleAppliesToGeneratedNames() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)
+        root.children.add(assetsDir)
+        assetsDir.children.add(
+            AssetNode("my-image.png", "assets/my-image.png", MediaType.IMAGE, null)
+        )
+
+        val config =
+            createMockConfig(
+                mapOf(
+                    Constants.KEY_NAME_STYLE to Constants.NAME_STYLE_SNAKE
+                )
+            )
+
+        val generatedCode =
+            DartClassGenerator(
+                root,
+                config,
+                hasSvg = false,
+                hasSvgDep = false,
+                hasLottie = false,
+                hasLottieDep = false,
+                hasRive = false,
+                hasRiveDep = false,
+                flutterVersion = null
+            )
+                .generate()
+
+        assertTrue(
+            generatedCode.contains(
+                "static const AssetGenImage my_image_png = AssetGenImage('assets/my-image.png');"
+            )
+        )
+    }
+
+    private fun createMockConfig(pluginConfig: Map<String, Any> = emptyMap()): ModulePubSpecConfig {
         val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
+        Mockito.`when`(mockConfig.map)
+            .thenReturn(
+                mapOf(
+                    Constants.KEY_CONFIGURATION_MAP to pluginConfig
+                )
+            )
 
         return mockConfig
     }

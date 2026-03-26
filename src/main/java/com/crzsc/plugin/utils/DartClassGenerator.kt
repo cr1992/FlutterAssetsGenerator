@@ -123,27 +123,24 @@ class DartClassGenerator(
         collectFiles(rootNode, allFiles)
 
         val isNamedWithParent = FileHelperNew.isNamedWithParent(config)
+        val nameStyle = FileHelperNew.getNameStyle(config)
         val nameMap = mutableMapOf<String, Int>()
 
-        // 使用统一的特殊字符处理逻辑
         for (file in allFiles) {
             if (file.type == MediaType.DIRECTORY) continue
 
-            // 使用 getSafeName 处理文件名 (统一了特殊字符和驼峰转换逻辑)
-            // 注意: getSafeName 内部已经处理了 keywords 和 camelCase 转换
-            var assetName = getSafeName(file.name)
+            val parent = file.virtualFile?.parent
+            val hasParentPrefix = isNamedWithParent && parent != null
+            var assetName = getSafeName(file.name, allowLeadingDigit = hasParentPrefix)
 
-            if (isNamedWithParent) {
-                file.virtualFile?.parent?.let { parent ->
-                    val parentName = getSafeName(parent.name)
-                    assetName = "${parentName}${assetName.replaceFirstChar { it.uppercase() }}"
+            if (hasParentPrefix) {
+                val parentName = getSafeName(parent!!.name)
+                assetName = combineIdentifier(parentName, assetName, nameStyle)
 
-                    if (nameMap.containsKey(assetName)) {
-                        parent.parent?.let { parentParent ->
-                            val parentParentName = getSafeName(parentParent.name)
-                            assetName =
-                                "${parentParentName}${assetName.replaceFirstChar { it.uppercase() }}"
-                        }
+                if (nameMap.containsKey(assetName)) {
+                    parent.parent?.let { parentParent ->
+                        val parentParentName = getSafeName(parentParent.name)
+                        assetName = combineIdentifier(parentParentName, assetName, nameStyle)
                     }
                 }
             }
@@ -165,7 +162,7 @@ class DartClassGenerator(
                     fullPath = "packages/$packageName/$fullPath"
                 }
             }
-            buffer.append("  static const String $assetName = '$fullPath';\n")
+            buffer.append("  static const String $finalName = '$fullPath';\n")
         }
 
         buffer.append("}\n")
@@ -256,11 +253,12 @@ class DartClassGenerator(
                 val sameBaseNameFiles = baseNameCount[baseName] ?: emptyList()
                 if (sameBaseNameFiles.size > 1) {
                     // 有多个同名文件,添加扩展名(驼峰式)
-                    val ext = child.virtualFile?.extension?.let { getSafeName(it) } ?: ""
+                    val ext =
+                        child.virtualFile?.extension?.let {
+                            getSafeName(it, allowLeadingDigit = true)
+                        } ?: ""
                     if (ext.isNotEmpty()) {
-                        // 将扩展名首字母大写,形成驼峰式
-                        val extCamelCase = ext.replaceFirstChar { it.uppercase() }
-                        uniqueName = "${baseName}${extCamelCase}"
+                        uniqueName = appendExtensionSuffix(baseName, ext)
                         LOG.info(
                             "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Renaming ${child.name}: $baseName → $uniqueName"
                         )
@@ -481,11 +479,12 @@ class DartClassGenerator(
                 val sameBaseNameFiles = baseNameCount[baseName] ?: emptyList()
                 if (sameBaseNameFiles.size > 1) {
                     // 有多个同名文件,添加扩展名(驼峰式)
-                    val ext = child.virtualFile?.extension?.let { getSafeName(it) } ?: ""
+                    val ext =
+                        child.virtualFile?.extension?.let {
+                            getSafeName(it, allowLeadingDigit = true)
+                        } ?: ""
                     if (ext.isNotEmpty()) {
-                        // 将扩展名首字母大写,形成驼峰式
-                        val extCamelCase = ext.replaceFirstChar { it.uppercase() }
-                        uniqueName = "${baseName}${extCamelCase}"
+                        uniqueName = appendExtensionSuffix(baseName, ext)
                         LOG.info(
                             "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryFields] Renaming ${child.name}: $baseName → $uniqueName"
                         )
@@ -952,27 +951,24 @@ $packageDecl
     }
 
     // 生成安全的变量名 (驼峰命名,处理关键词冲突和特殊字符)
-    private fun getSafeName(name: String): String {
-        // 1. Remove Diacritics
-        val normalized = Normalizer.normalize(name, Normalizer.Form.NFD)
-        val withoutDiacritics = normalized.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+    private fun getSafeName(name: String, allowLeadingDigit: Boolean = false): String {
+        val filtered = sanitizeName(name)
+        val nameStyle = FileHelperNew.getNameStyle(config)
+        var newName =
+            if (nameStyle == Constants.NAME_STYLE_SNAKE) {
+                filtered
+                    .replace(Regex("[-.]"), "_")
+                    .replace(Regex("_+"), "_")
+                    .trim('_')
+                    .lowercase()
+            } else {
+                filtered.toLowCamelCase(Regex("[-_.]"))
+            }
 
-        // 2. Filter special characters (existing logic)
-        val filtered =
-            withoutDiacritics
-                .replace(Regex("[\\s()\\[\\]{}'\"`!@#$%^&*+=|\\\\:;,<>?/]"), "_")
-                .replace(Regex("_+"), "_") // 将连续的下划线替换为单个
-                .trim('_') // 移除首尾的下划线
-
-        // 转换为驼峰命名
-        var newName = filtered.toLowCamelCase(Regex("[-_.]"))
-
-        // 处理以数字开头的情况 (Dart变量名不能以数字开头)
-        if (newName.isNotEmpty() && newName[0].isDigit()) {
+        if (!allowLeadingDigit && newName.isNotEmpty() && newName[0].isDigit()) {
             newName = "a$newName"
         }
 
-        // 处理关键词冲突
         if (isKeyWord(newName)) {
             newName = "${newName}_"
         }
@@ -982,12 +978,43 @@ $packageDecl
 
     /** 生成目录对应的类名 策略: 使用节点名称转换为驼峰命名 + "Gen" 后缀,并在前面加上 "$" 符号和根类名 例如: image 目录 -> $AssetsImageGen */
     private fun getGenClassName(node: AssetNode): String {
-        // 使用节点名称而不是完整路径
-        val nodeName = node.name
-        val safeName = nodeName.replace("-", "_").replace(".", "_")
+        val safeName = sanitizeName(node.name).replace(Regex("[-.]"), "_")
         val camelCaseName =
-            safeName.split("_").joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
+            safeName
+                .split("_")
+                .filter { it.isNotEmpty() }
+                .joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
         return "$" + FileHelperNew.getGeneratedClassName(config) + camelCaseName + "Gen"
+    }
+
+    private fun sanitizeName(name: String): String {
+        val normalized = Normalizer.normalize(name, Normalizer.Form.NFD)
+        val withoutDiacritics =
+            normalized.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+
+        return withoutDiacritics
+            .replace(Regex("[\\s()\\[\\]{}'\"`!@#$%^&*+=|\\\\:;,<>?/]"), "_")
+            .replace(Regex("_+"), "_")
+            .trim('_')
+    }
+
+    private fun combineIdentifier(parentName: String, childName: String, nameStyle: String): String {
+        if (parentName.isEmpty()) return childName
+        if (childName.isEmpty()) return parentName
+
+        return if (nameStyle == Constants.NAME_STYLE_SNAKE) {
+            "${parentName}_${childName}"
+        } else {
+            parentName + childName.replaceFirstChar { it.uppercase() }
+        }
+    }
+
+    private fun appendExtensionSuffix(baseName: String, extName: String): String {
+        return if (FileHelperNew.getNameStyle(config) == Constants.NAME_STYLE_SNAKE) {
+            "${baseName}_${extName}"
+        } else {
+            baseName + extName.replaceFirstChar { it.uppercase() }
+        }
     }
 
     private fun isKeyWord(name: String): Boolean {
