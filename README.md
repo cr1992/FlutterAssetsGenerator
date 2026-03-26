@@ -8,6 +8,11 @@
 <!-- Plugin description -->
 A powerful Android Studio / IntelliJ plugin that automatically generates a type-safe, hierarchical asset index for your Flutter projects.
 
+### Support
+
+- Found a bug or unexpected behavior? Please report it at [GitHub Issues](https://github.com/cr1992/FlutterAssetsGenerator/issues).
+- New plugin releases are published at [GitHub Releases](https://github.com/cr1992/FlutterAssetsGenerator/releases). Check there for the latest release notes and installable packages.
+
 ### Core Features
 
 - **Hierarchical Generation**: Generates classes that mirror your directory structure (e.g., `Assets.images.logo`).
@@ -109,6 +114,7 @@ Assets.images.logo.custom(
 // Get raw path string
 String path = Assets.images.logo.path;
 ```
+
 <!-- Plugin description end -->
 
 ---
