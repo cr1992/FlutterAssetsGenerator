@@ -7,6 +7,9 @@ import com.crzsc.plugin.utils.Constants
 import com.crzsc.plugin.utils.ModulePubSpecConfig
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiTreeChangeEvent
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -43,6 +46,50 @@ class ListenerLogicTest {
 
         assertTrue(listener.isDirectAssetChild(enabledConfig, assetDir, Mockito.mock(Any::class.java)))
         assertFalse(listener.isDirectAssetChild(enabledConfig, Mockito.mock(VirtualFile::class.java), Mockito.mock(Any::class.java)))
+    }
+
+    @Test
+    fun testPendingEventsCollectedCorrectly() {
+        val listener = PsiTreeListener(mockProject())
+
+        // 模拟多个事件加入 pendingEvents
+        val event1 = Mockito.mock(PsiTreeChangeEvent::class.java)
+        val event2 = Mockito.mock(PsiTreeChangeEvent::class.java)
+        val event3 = Mockito.mock(PsiTreeChangeEvent::class.java)
+
+        listener.pendingEvents.add(event1)
+        listener.pendingEvents.add(event2)
+        listener.pendingEvents.add(event3)
+
+        assertEquals(3, listener.pendingEvents.size)
+
+        // 验证事件按顺序收集
+        assertTrue(listener.pendingEvents[0] === event1)
+        assertTrue(listener.pendingEvents[2] === event3)
+    }
+
+    @Test
+    fun testPendingEventsClearAndReuse() {
+        val listener = PsiTreeListener(mockProject())
+
+        // 加入一批事件
+        repeat(10) {
+            listener.pendingEvents.add(Mockito.mock(PsiTreeChangeEvent::class.java))
+        }
+        assertEquals(10, listener.pendingEvents.size)
+
+        // 模拟 processPendingEvents 中的 toList + clear 逻辑
+        val snapshot: List<PsiTreeChangeEvent>
+        synchronized(listener.pendingEvents) {
+            snapshot = listener.pendingEvents.toList()
+            listener.pendingEvents.clear()
+        }
+        assertEquals(10, snapshot.size)
+        assertEquals(0, listener.pendingEvents.size)
+
+        // 清空后新事件仍可正常收集
+        listener.pendingEvents.add(Mockito.mock(PsiTreeChangeEvent::class.java))
+        assertEquals(1, listener.pendingEvents.size)
     }
 
     private fun basePubspecConfig(): PubspecConfig {

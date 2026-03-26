@@ -16,6 +16,9 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     // 使用 IntelliJ Alarm 工具类进行防抖处理，确保在 SWING 线程执行
     private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, project)
 
+    // 防抖窗口内收集的待处理事件
+    internal val pendingEvents = mutableListOf<PsiTreeChangeEvent>()
+
     override fun beforePropertyChange(event: PsiTreeChangeEvent) {}
 
     override fun childReplaced(event: PsiTreeChangeEvent) {
@@ -74,8 +77,27 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
     }
 
     private fun handleEvent(event: PsiTreeChangeEvent) {
-        // 注意: pubspec.yaml 的变更现在由 PubspecDocumentListener 处理
-        // 这里只监听 assets 目录下的文件变更
+        // 收集事件，防抖结束后统一处理，避免每次事件都调用 getAssets()
+        synchronized(pendingEvents) {
+            pendingEvents.add(event)
+        }
+        alarm.cancelAllRequests()
+        alarm.addRequest(
+            {
+                if (!project.isDisposed) {
+                    processPendingEvents()
+                }
+            },
+            300
+        )
+    }
+
+    internal fun processPendingEvents() {
+        val events: List<PsiTreeChangeEvent>
+        synchronized(pendingEvents) {
+            events = pendingEvents.toList()
+            pendingEvents.clear()
+        }
 
         val assets = FileHelperNew.getAssets(project)
         for (config in assets) {
@@ -83,20 +105,13 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
                 continue
             }
 
-            event.child?.let { changedFile ->
-                val parentDir = changedFile.parent.castSafelyTo<PsiDirectory>()?.virtualFile
-                if (isDirectAssetChild(config, parentDir, changedFile)) {
-                    // 资源文件变更响应较快,防抖时间设置为 300ms
-                    alarm.cancelAllRequests()
-                    alarm.addRequest(
-                        {
-                            if (!project.isDisposed) {
-                                fileGenerator.generateOne(config)
-                            }
-                        },
-                        300
-                    )
-                    return
+            for (event in events) {
+                event.child?.let { changedFile ->
+                    val parentDir = changedFile.parent.castSafelyTo<PsiDirectory>()?.virtualFile
+                    if (isDirectAssetChild(config, parentDir, changedFile)) {
+                        fileGenerator.generateOne(config)
+                        return
+                    }
                 }
             }
         }
