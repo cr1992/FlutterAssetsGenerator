@@ -28,14 +28,19 @@ class FileGenerator(private val project: Project) {
     companion object {
         private val LOG = Logger.getInstance(FileGenerator::class.java)
         internal const val SETUP_REQUIRED_MESSAGE =
-            "No enabled flutter_assets_generator modules found. Run 'Setup Project Configuration' first or set enable: true."
+            "No Flutter modules available for generation. Run 'Setup Project Configuration' first or set enable: true."
     }
 
     /** 为所有模块重新生成 */
     /** 为所有模块重新生成 */
     fun generateAll() {
-        val assets = getEnabledConfigs()
+        val allConfigs = FileHelperNew.getAssets(project)
+        val assets = filterEnabledConfigs(allConfigs)
+        LOG.info(
+            "[FlutterAssetsGenerator #${project.name}] ${assets.size} module(s) available for generation out of ${allConfigs.size} discovered module(s)"
+        )
         if (shouldShowSetupPrompt(assets)) {
+            logExcludedGenerationCandidates(allConfigs)
             showNotify(SETUP_REQUIRED_MESSAGE)
             return
         }
@@ -89,8 +94,28 @@ class FileGenerator(private val project: Project) {
         return configs.isEmpty()
     }
 
-    private fun getEnabledConfigs(): List<ModulePubSpecConfig> {
-        return filterEnabledConfigs(FileHelperNew.getAssets(project))
+    private fun logExcludedGenerationCandidates(configs: List<ModulePubSpecConfig>) {
+        for (config in configs) {
+            val hasPluginConfig = FileHelperNew.hasPluginConfig(config)
+            val isEnabled = FileHelperNew.isPluginEnabled(config)
+            val assetCount = config.assetVFiles.size
+            if (hasPluginConfig && isEnabled && assetCount > 0) {
+                continue
+            }
+            val configuredAssets =
+                FileHelperNew.tryGetAssetsList(config.map)
+                    ?.joinToString(prefix = "[", postfix = "]") ?: "[]"
+            val reason =
+                when {
+                    !hasPluginConfig -> "missing flutter_assets_generator config"
+                    !isEnabled -> "enable=false"
+                    assetCount == 0 -> "no resolvable assets"
+                    else -> "included"
+                }
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] generation candidate check: pubspec=${config.pubRoot.pubspec.path}, hasPluginConfig=$hasPluginConfig, enabled=$isEnabled, assetCount=$assetCount, configuredAssets=$configuredAssets, reason=$reason"
+            )
+        }
     }
 
     private data class GenerationData(
