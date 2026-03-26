@@ -23,13 +23,15 @@ class PubspecConfigTest {
                 "environment" to mapOf("flutter" to ">=3.0.0", "sdk" to ">=2.17.0"),
                 "flutter_assets_generator" to
                         mapOf(
+                            "enable" to true,
                             "auto_detection" to true,
                             "output_dir" to "lib/gen",
                             "class_name" to "MyAssets",
                             "output_filename" to "my_assets",
                             "filename_split_pattern" to "_",
                             "path_ignore" to listOf("ignore_me"),
-                            "style" to "legacy"
+                            "style" to "legacy",
+                            "name_style" to "snake"
                         )
             )
 
@@ -48,6 +50,8 @@ class PubspecConfigTest {
         assertEquals(">=2.17.0", config.dartVersion)
 
         // Verify plugin config
+        assertTrue(config.hasPluginConfig)
+        assertTrue(config.pluginEnabled)
         assertTrue(config.autoDetection)
         assertEquals("lib/gen", config.outputDir)
         assertEquals("MyAssets", config.className)
@@ -55,6 +59,7 @@ class PubspecConfigTest {
         assertEquals("_", config.filenameSplitPattern)
         assertEquals("ignore_me", config.pathIgnore[0])
         assertEquals("legacy", config.generationStyle)
+        assertEquals("snake", config.nameStyle)
         assertFalse(config.packageParameterEnabled)
     }
 
@@ -66,12 +71,15 @@ class PubspecConfigTest {
         assertTrue(config.assetPaths.isEmpty())
         assertNull(config.flutterSvgVersion)
         assertNull(config.lottieVersion)
+        assertFalse(config.hasPluginConfig)
+        assertFalse(config.pluginEnabled)
         assertFalse(config.autoDetection)
         assertEquals("generated", config.outputDir)
         assertEquals("Assets", config.className)
         assertEquals("assets", config.outputFilename)
         assertEquals("[-_]", config.filenameSplitPattern)
         assertEquals("robust", config.generationStyle)
+        assertEquals("camel", config.nameStyle)
         assertFalse(config.packageParameterEnabled)
     }
 
@@ -164,6 +172,8 @@ class PubspecConfigTest {
             lottieVersion = "^2.0.0",
             flutterVersion = ">=3.0.0",
             dartVersion = ">=2.17.0",
+            hasPluginConfig = true,
+            pluginEnabled = true,
             autoDetection = true,
             autoAddDependencies = true,
             outputDir = "generated",
@@ -172,6 +182,7 @@ class PubspecConfigTest {
             filenameSplitPattern = "[-_]",
             pathIgnore = emptyList(),
             generationStyle = "robust",
+            nameStyle = "camel",
             packageParameterEnabled = false
         )
     }

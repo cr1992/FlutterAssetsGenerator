@@ -131,14 +131,32 @@ object FileHelperNew {
 
     /** 读取配置 */
     private fun readSetting(config: ModulePubSpecConfig, key: String): Any? {
-        (config.map[Constants.KEY_CONFIGURATION_MAP] as? Map<*, *>)?.let { configureMap ->
+        getPluginConfigMap(config)?.let { configureMap ->
             return configureMap[key]
         }
         return null
     }
 
+    private fun getPluginConfigMap(config: ModulePubSpecConfig): Map<*, *>? {
+        return config.map[Constants.KEY_CONFIGURATION_MAP] as? Map<*, *>
+    }
+
+    /** 是否存在 flutter_assets_generator 配置块 */
+    fun hasPluginConfig(config: ModulePubSpecConfig): Boolean {
+        return getPluginConfigMap(config) != null
+    }
+
+    /** 插件能力是否启用 */
+    fun isPluginEnabled(config: ModulePubSpecConfig): Boolean {
+        val pluginConfig = getPluginConfigMap(config) ?: return false
+        return pluginConfig[Constants.KEY_ENABLE] as? Boolean ?: true
+    }
+
     /** 是否开启了自动检测 */
     fun isAutoDetectionEnable(config: ModulePubSpecConfig): Boolean {
+        if (!isPluginEnabled(config)) {
+            return false
+        }
         return readSetting(config, Constants.KEY_AUTO_DETECTION) as Boolean? ?: true
     }
 
@@ -155,6 +173,14 @@ object FileHelperNew {
     /** 是否在 legacy 样式中使用父目录作为变量名前缀 */
     fun isNamedWithParent(config: ModulePubSpecConfig): Boolean {
         return readSetting(config, Constants.KEY_NAMED_WITH_PARENT) as Boolean? ?: true
+    }
+
+    /** 读取命名风格配置 */
+    fun getNameStyle(config: ModulePubSpecConfig): String {
+        return when (readSetting(config, Constants.KEY_NAME_STYLE) as? String) {
+            Constants.NAME_STYLE_SNAKE -> Constants.NAME_STYLE_SNAKE
+            else -> Constants.DEFAULT_NAME_STYLE
+        }
     }
 
     /** 读取生成的类名配置 */

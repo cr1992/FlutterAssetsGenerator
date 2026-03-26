@@ -1,5 +1,6 @@
 package com.crzsc.plugin.cache
 
+import com.crzsc.plugin.utils.Constants
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -20,6 +21,8 @@ data class PubspecConfig(
     val dartVersion: String?,
 
     // 插件自定义配置
+    val hasPluginConfig: Boolean,
+    val pluginEnabled: Boolean,
     val autoDetection: Boolean,
     val autoAddDependencies: Boolean,
     val outputDir: String,
@@ -28,6 +31,7 @@ data class PubspecConfig(
     val filenameSplitPattern: String,
     val pathIgnore: List<String>,
     val generationStyle: String, // "robust" (default), "legacy", "snake_case"
+    val nameStyle: String,
     val packageParameterEnabled: Boolean
 ) {
     companion object {
@@ -53,22 +57,41 @@ data class PubspecConfig(
             val dartVersion = environment?.get("sdk") as? String
 
             // 读取插件配置
-            val pluginConfig = data["flutter_assets_generator"] as? Map<*, *>
-            val autoDetection = pluginConfig?.get("auto_detection") as? Boolean ?: false
-            val autoAddDependencies = pluginConfig?.get("auto_add_dependencies") as? Boolean ?: true
-            val outputDir = pluginConfig?.get("output_dir") as? String ?: "generated"
-            val className = pluginConfig?.get("class_name") as? String ?: "Assets"
-            val outputFilename = pluginConfig?.get("output_filename") as? String ?: "assets"
+            val pluginConfig = data[Constants.KEY_CONFIGURATION_MAP] as? Map<*, *>
+            val hasPluginConfig = pluginConfig != null
+            val pluginEnabled =
+                if (pluginConfig == null) {
+                    false
+                } else {
+                    pluginConfig[Constants.KEY_ENABLE] as? Boolean ?: true
+                }
+            val autoDetection =
+                pluginConfig?.get(Constants.KEY_AUTO_DETECTION) as? Boolean ?: false
+            val autoAddDependencies =
+                pluginConfig?.get(Constants.KEY_AUTO_ADD_DEPENDENCIES) as? Boolean ?: true
+            val outputDir =
+                pluginConfig?.get(Constants.KEY_OUTPUT_DIR) as? String ?: Constants.DEFAULT_OUTPUT_DIR
+            val className =
+                pluginConfig?.get(Constants.KEY_CLASS_NAME) as? String ?: Constants.DEFAULT_CLASS_NAME
+            val outputFilename =
+                pluginConfig?.get(Constants.KEY_OUTPUT_FILENAME) as? String ?: "assets"
             val filenameSplitPattern =
-                pluginConfig?.get("filename_split_pattern") as? String ?: "[-_]"
+                pluginConfig?.get(Constants.FILENAME_SPLIT_PATTERN) as? String
+                    ?: Constants.DEFAULT_FILENAME_SPLIT_PATTERN
             val pathIgnore =
-                (pluginConfig?.get("path_ignore") as? List<*>)?.mapNotNull { it as? String }
+                (pluginConfig?.get(Constants.PATH_IGNORE) as? List<*>)?.mapNotNull {
+                    it as? String
+                }
                     ?: emptyList()
 
             // 读取生成风格配置: 'robust' (默认,新版), 'legacy' (旧版兼容)
             val generationStyle = pluginConfig?.get("style") as? String ?: "robust"
+            val nameStyle = when (pluginConfig?.get(Constants.KEY_NAME_STYLE) as? String) {
+                Constants.NAME_STYLE_SNAKE -> Constants.NAME_STYLE_SNAKE
+                else -> Constants.DEFAULT_NAME_STYLE
+            }
             val packageParameterEnabled =
-                pluginConfig?.get("package_parameter_enabled") as? Boolean ?: false
+                pluginConfig?.get(Constants.KEY_PACKAGE_PARAMETER_ENABLED) as? Boolean ?: false
 
             return PubspecConfig(
                 assetPaths = assetPaths,
@@ -76,6 +99,8 @@ data class PubspecConfig(
                 lottieVersion = lottieVersion,
                 flutterVersion = flutterVersion,
                 dartVersion = dartVersion,
+                hasPluginConfig = hasPluginConfig,
+                pluginEnabled = pluginEnabled,
                 autoDetection = autoDetection,
                 autoAddDependencies = autoAddDependencies,
                 outputDir = outputDir,
@@ -84,6 +109,7 @@ data class PubspecConfig(
                 filenameSplitPattern = filenameSplitPattern,
                 pathIgnore = pathIgnore,
                 generationStyle = generationStyle,
+                nameStyle = nameStyle,
                 packageParameterEnabled = packageParameterEnabled
             )
         }
@@ -184,6 +210,8 @@ object PubspecConfigCache {
     /** 比较配置是否发生实质性变化(忽略依赖版本) */
     private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
         return old.assetPaths != new.assetPaths ||
+                old.hasPluginConfig != new.hasPluginConfig ||
+                old.pluginEnabled != new.pluginEnabled ||
                 old.autoDetection != new.autoDetection ||
                 old.autoAddDependencies != new.autoAddDependencies ||
                 old.outputDir != new.outputDir ||
@@ -192,6 +220,7 @@ object PubspecConfigCache {
                 old.filenameSplitPattern != new.filenameSplitPattern ||
                 old.pathIgnore != new.pathIgnore ||
                 old.generationStyle != new.generationStyle ||
+                old.nameStyle != new.nameStyle ||
                 old.packageParameterEnabled != new.packageParameterEnabled
         // 注意:故意忽略 flutterSvgVersion, lottieVersion, flutterVersion, dartVersion
     }
@@ -233,6 +262,16 @@ object PubspecConfigCache {
                 "[FlutterAssetsGenerator #${project.name}] auto_detection changed: ${old.autoDetection} -> ${new.autoDetection}"
             )
         }
+        if (old.hasPluginConfig != new.hasPluginConfig) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] has_plugin_config changed: ${old.hasPluginConfig} -> ${new.hasPluginConfig}"
+            )
+        }
+        if (old.pluginEnabled != new.pluginEnabled) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] plugin_enabled changed: ${old.pluginEnabled} -> ${new.pluginEnabled}"
+            )
+        }
         if (old.autoAddDependencies != new.autoAddDependencies) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}] auto_add_dependencies changed: ${old.autoAddDependencies} -> ${new.autoAddDependencies}"
@@ -241,6 +280,11 @@ object PubspecConfigCache {
         if (old.generationStyle != new.generationStyle) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}] generation_style changed: ${old.generationStyle} -> ${new.generationStyle}"
+            )
+        }
+        if (old.nameStyle != new.nameStyle) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] name_style changed: ${old.nameStyle} -> ${new.nameStyle}"
             )
         }
         if (old.packageParameterEnabled != new.packageParameterEnabled) {

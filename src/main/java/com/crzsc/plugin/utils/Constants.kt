@@ -4,6 +4,9 @@ object Constants {
     /** 配置map的key */
     const val KEY_CONFIGURATION_MAP = "flutter_assets_generator"
 
+    /** 是否启用插件能力 */
+    const val KEY_ENABLE = "enable"
+
     /** 输出目录的key */
     const val KEY_OUTPUT_DIR = "output_dir"
 
@@ -22,6 +25,9 @@ object Constants {
     /** 是否在 legacy 样式中使用父目录作为变量名前缀 (默认 true) */
     const val KEY_NAMED_WITH_PARENT = "named_with_parent"
 
+    /** 命名风格 */
+    const val KEY_NAME_STYLE = "name_style"
+
     /** 输出的文件名 */
     const val KEY_OUTPUT_FILENAME = "output_filename"
 
@@ -34,6 +40,9 @@ object Constants {
     /** 默认目录 */
     const val DEFAULT_OUTPUT_DIR = "generated"
     const val DEFAULT_CLASS_NAME = "Assets"
+    const val DEFAULT_NAME_STYLE = "camel"
+    const val NAME_STYLE_CAMEL = "camel"
+    const val NAME_STYLE_SNAKE = "snake"
 
     const val DEFAULT_FILENAME_SPLIT_PATTERN = "[-_]"
 }

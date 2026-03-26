@@ -69,6 +69,7 @@ class SetupProjectAction : AnAction() {
             val configContent =
                 """
                 flutter_assets_generator:
+                  enable: true
                   output_dir: generated/
                   output_filename: assets
                   class_name: Assets
@@ -77,6 +78,8 @@ class SetupProjectAction : AnAction() {
                   auto_add_dependencies: true
                   # Options: robust (default), legacy (old style)
                   style: robust
+                  # Options: camel (default), snake
+                  name_style: camel
                   package_parameter_enabled: false
                   named_with_parent: true
                   path_ignore: []
