@@ -6,7 +6,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
-import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import io.flutter.pub.PubRoot
@@ -20,11 +21,15 @@ import org.yaml.snakeyaml.Yaml
 /** 基于Module来处理Assets */
 object FileHelperNew {
 
+    private val LOG = Logger.getInstance(FileHelperNew::class.java)
+
     /** 获取所有可用的Flutter Module的Asset配置 */
     @JvmStatic
     fun getAssets(project: Project): List<ModulePubSpecConfig> {
         val folders = mutableListOf<ModulePubSpecConfig>()
         val pubspecFiles = mutableListOf<VirtualFile>()
+        // 使用 contentScope 而非 projectScope，避免扫描 External Libraries（如 .pub-cache）
+        val scope = ProjectScope.getContentScope(project)
         FilenameIndex.processFilesByName(
             "pubspec.yaml",
             false,
@@ -32,14 +37,32 @@ object FileHelperNew {
                 file.virtualFile?.let { pubspecFiles.add(it) }
                 true
             },
-            GlobalSearchScope.projectScope(project),
+            scope,
             project
         )
 
-        for (pubspecFile in pubspecFiles) {
-            val module = pubspecFile.getModule(project) ?: continue
+        // 过滤掉缓存/依赖目录中的 pubspec.yaml
+        val cacheSegments = setOf(".dart_tool", ".pub-cache", ".pub", ".symlinks", "build", ".flutter-plugins-dependencies")
+        val filtered = pubspecFiles.filter { file ->
+            val path = file.path
+            val excluded = cacheSegments.firstOrNull { segment -> path.contains("/$segment/") }
+            if (excluded != null) {
+                LOG.info("  excluded (matched /$excluded/): $path")
+            }
+            excluded == null
+        }
+        LOG.info("Found ${pubspecFiles.size} pubspec.yaml, after filtering: ${filtered.size}")
+
+        for (pubspecFile in filtered) {
+            val module = pubspecFile.getModule(project)
+            if (module == null) {
+                LOG.info("  skipped (no module): ${pubspecFile.path}")
+                continue
+            }
+            LOG.info("  accepted: ${pubspecFile.path} [module=${module.name}]")
             getPubSpecConfig(module, pubspecFile)?.let { folders.add(it) }
         }
+        LOG.info("Resolved ${folders.size} Flutter module config(s)")
         return folders
     }
 
