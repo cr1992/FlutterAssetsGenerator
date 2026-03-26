@@ -34,7 +34,7 @@ This will automatically add the default configuration to your `pubspec.yaml`:
 ```yaml
 flutter_assets_generator:
   enable: true
-  output_dir: lib/generated/
+  output_dir: generated/
   output_filename: assets
   class_name: Assets
   auto_detection: true
@@ -51,8 +51,8 @@ flutter_assets_generator:
 flutter_assets_generator:
   # Enable/Disable this plugin for the current module. Default: true when the block exists
   enable: true
-  # Sets the directory of generated files. Default: lib/generated
-  output_dir: lib/generated/
+  # Sets the directory of generated files. Default: generated
+  output_dir: generated/
   # Sets the name for the generated file. Default: assets
   output_filename: assets
   # Enable package parameter generation (package: 'your_package_name'). Default: false

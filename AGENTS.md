@@ -20,4 +20,14 @@ Source files are Kotlin (`.kt`) stored under `src/main/java/`; keep package name
 Tests use JUnit 4 with Mockito. Add new tests in `src/test/kotlin/` and name them `*Test.kt`. Match existing patterns by covering edge cases in code generation, config parsing, and regression scenarios. Run `./gradlew test` before opening a PR; changes to generation or config parsing should include regression coverage.
 
 ## Commit & Pull Request Guidelines
-Recent history uses short, imperative subjects in either English or Chinese, for example `chore: release 3.1.0` and `修复兼容性问题`. Keep the first line concise and scoped to one change. PRs should describe the user-facing effect, list validation steps, and note any IntelliJ/Flutter compatibility impact. Include screenshots or GIFs when changing actions, notifications, or editor UI. If behavior or release messaging changes, update `README.md` and relevant files in `doc/`.
+Recent history uses short, imperative subjects in either English or Chinese, for example `chore: release 3.2.0` and `修复兼容性问题`. Keep the first line concise and scoped to one change. PRs should describe the user-facing effect, list validation steps, and note any IntelliJ/Flutter compatibility impact. Include screenshots or GIFs when changing actions, notifications, or editor UI. If behavior or release messaging changes, update `README.md`, `doc/CHANGELOG.md`, and other relevant files in `doc/`. Keep release docs aligned with actual defaults in `SetupProjectAction`, especially `enable: true`, `output_dir: generated/`, and `name_style: camel`.
+
+## Release Notes Checklist
+When updating the release version or plugin description, keep the following in sync:
+
+- Update `pluginVersion` in `gradle.properties`.
+- Move the current release notes from `doc/CHANGELOG.md` `Unreleased` into a concrete version section such as `## [3.2.0]`.
+- Keep `README.md`, `doc/PLUGIN_DESCRIPTION.md`, and `doc/TECHNICAL_DESIGN.md` aligned with the current release number when they mention a specific version.
+- Keep documentation examples aligned with actual code defaults from `SetupProjectAction`, especially `enable: true`, `output_dir: generated/`, `style: robust`, and `name_style: camel`.
+- If plugin marketplace description or change notes changed, run `./gradlew patchPluginXml`.
+- Before release, verify there are no stale examples such as `lib/generated/` if the code now writes `generated/`.

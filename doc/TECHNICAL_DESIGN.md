@@ -1,9 +1,9 @@
-# Flutter Assets Generator 3.0.0 技术方案详述
+# Flutter Assets Generator 3.2.0 技术方案详述
 
-> **文档版本**: `b2b916c` - Rive 支持与子模块优化 (2026-02-11)
-> **最后更新**: 2026-02-11
+> **文档版本**: `3.2.0`
+> **最后更新**: 2026-03-26
 
-本文档详细描述了 Flutter Assets Generator 插件 (v3.1.0) 的技术架构、核心流程与关键实现细节。
+本文档详细描述了 Flutter Assets Generator 插件 (v3.2.0) 的技术架构、核心流程与关键实现细节。
 
 ## 1. 架构概览 (Architecture Overview)
 
@@ -314,7 +314,7 @@ private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
 *   **非递归扫描**: 默认不递归扫描子目录，除非子目录也在配置中被显式包含。这避免了将未配置的测试资源或临时文件意外生成到索引中。
 
 ### 4.3 智能生成风格 (Robust Style)
-v3.0.0 默认采用 Robust 风格，生成的类结构如下：
+v3.2.0 默认采用 Robust 风格，生成的类结构如下：
 
 ```dart
 class Assets {

@@ -2,6 +2,8 @@
 
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [Unreleased]
+
+## [3.2.0]
 ### Added / 新增
 - **Enable Config**: Added `enable` to explicitly control whether a module participates in watching and generation.
   - **启用开关**: 新增 `enable` 配置，用于显式控制模块是否参与监听和生成。
