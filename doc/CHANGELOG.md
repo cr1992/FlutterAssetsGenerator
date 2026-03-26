@@ -7,14 +7,14 @@
 ### Added / 新增
 - **Enable Config**: Added `enable` to explicitly control whether a module participates in watching and generation.
   - **启用开关**: 新增 `enable` 配置，用于显式控制模块是否参与监听和生成。
-- **Name Style Config**: Added `name_style: camel | snake` for generated identifiers.
-  - **命名风格配置**: 新增 `name_style: camel | snake` 配置，用于控制生成标识符的命名风格。
 
 ### Changed / 变更
 - **YAML Source of Truth**: 3.x now treats `pubspec.yaml` as the source of truth. Modules without a `flutter_assets_generator` block are no longer watched or generated automatically.
   - **YAML 单一配置源**: 3.x 以后统一以 `pubspec.yaml` 为准。未配置 `flutter_assets_generator` 的模块不再自动监听或生成。
 
 ### Fixed / 修复
+- **Name Style Handling**: Fixed `name_style` handling so generated identifiers now consistently respect `camel` and `snake`.
+  - **命名风格处理**: 修复 `name_style` 配置未被完整应用的问题，确保生成标识符稳定遵循 `camel` 和 `snake`。
 - **Legacy Naming Compatibility**: Restored legacy flat naming behavior for numeric assets such as `assets/images/0.png -> Assets.images0`.
   - **Legacy 命名兼容**: 恢复旧版扁平命名在数字资源下的兼容行为，例如 `assets/images/0.png -> Assets.images0`。
 

@@ -5,6 +5,7 @@
 <a name="english"></a>
 ## English
 
+<!-- Plugin description -->
 A powerful Android Studio / IntelliJ plugin that automatically generates a type-safe, hierarchical asset index for your Flutter projects.
 
 ### Core Features
@@ -108,6 +109,7 @@ Assets.images.logo.custom(
 // Get raw path string
 String path = Assets.images.logo.path;
 ```
+<!-- Plugin description end -->
 
 ---
 
