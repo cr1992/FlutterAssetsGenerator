@@ -37,81 +37,62 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
             "[FlutterAssetsGenerator #${project.name}] pubspec.yaml saved: ${pubspecFile.path}"
         )
 
-        // 获取项目中所有 Flutter 模块的配置
-        val assets = FileHelperNew.getAssets(project)
+        val config =
+            FileHelperNew.getAssets(project).firstOrNull { it.pubRoot.pubspec == pubspecFile } ?: return
+        val modulePath = config.pubRoot.pubspec.parent.path
 
-        for (config in assets) {
-            // 检查是否是当前保存的 pubspec.yaml
-            if (config.pubRoot.pubspec != pubspecFile) {
-                continue
-            }
+        // 使用 invokeLater 延迟读取配置和生成,确保读取到保存后的最新内容
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) {
+                try {
+                    val content = document.text
+                    val yaml = Yaml()
+                    val data = yaml.load<Map<*, *>>(content) ?: return@invokeLater
 
-            // 检查是否启用了自动检测
-            if (!FileHelperNew.isAutoDetectionEnable(config)) {
-                LOG.info(
-                    "[FlutterAssetsGenerator #${project.name}/${config.module.name}] auto_detection disabled, skipping"
-                )
-                continue
-            }
+                    val newConfig = PubspecConfig.fromMap(data)
+                    val hasChanged = PubspecConfigCache.hasChanged(project, modulePath, newConfig)
 
-            val modulePath = config.pubRoot.pubspec.parent.path
+                    if (!hasChanged) {
+                        LOG.info(
+                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config unchanged, skipping generation"
+                        )
+                        return@invokeLater
+                    }
 
-            // 使用 invokeLater 延迟读取配置和生成,确保读取到保存后的最新内容
-            ApplicationManager.getApplication().invokeLater {
-                if (!project.isDisposed) {
-                    try {
-                        val content = document.text
-                        val yaml = Yaml()
-                        val data = yaml.load<Map<*, *>>(content) ?: return@invokeLater
+                    PubspecConfigCache.put(project, modulePath, newConfig)
 
-                        // 在这里读取配置,确保文件已经保存到磁盘
-                        // 使用优化后的 fromMap 避免重复解析
-                        val newConfig = PubspecConfig.fromMap(data)
+                    if (!newConfig.hasPluginConfig || !newConfig.pluginEnabled || !newConfig.autoDetection) {
+                        LOG.info(
+                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Plugin config missing, disabled, or auto_detection off; skipping generation"
+                        )
+                        return@invokeLater
+                    }
 
-                        // 检查配置是否改变
-                        val hasChanged =
-                            PubspecConfigCache.hasChanged(project, modulePath, newConfig)
+                    LOG.info(
+                        "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config changed, triggering generation"
+                    )
 
-                        if (hasChanged) {
-                            LOG.info(
-                                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config changed, triggering generation"
-                            )
+                    val updatedConfig =
+                        FileHelperNew.getPubSpecConfigFromMap(
+                            config.module,
+                            config.pubRoot.pubspec,
+                            data as Map<String, Any>
+                        )
 
-                            // 更新缓存
-                            PubspecConfigCache.put(project, modulePath, newConfig)
-
-                            // 使用最新的配置重新加载 ModulePubSpecConfig 对象
-                            // 使用 optimize 的 getPubSpecConfigFromMap 避免再次解析 YAML
-                            val updatedConfig =
-                                FileHelperNew.getPubSpecConfigFromMap(
-                                    config.module,
-                                    config.pubRoot.pubspec,
-                                    data as Map<String, Any>
-                                )
-
-                            if (updatedConfig != null) {
-                                // 触发生成
-                                fileGenerator.generateOne(updatedConfig)
-                            } else {
-                                LOG.error(
-                                    "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Failed to reload config for generation"
-                                )
-                            }
-                        } else {
-                            LOG.info(
-                                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config unchanged, skipping generation"
-                            )
-                        }
-                    } catch (e: Exception) {
+                    if (updatedConfig != null) {
+                        fileGenerator.generateOne(updatedConfig)
+                    } else {
                         LOG.error(
-                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Processing failed",
-                            e
+                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Failed to reload config for generation"
                         )
                     }
+                } catch (e: Exception) {
+                    LOG.error(
+                        "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Processing failed",
+                        e
+                    )
                 }
             }
-
-            return
         }
     }
 }

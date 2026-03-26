@@ -27,18 +27,16 @@ import org.jetbrains.yaml.psi.YAMLSequence
 class FileGenerator(private val project: Project) {
     companion object {
         private val LOG = Logger.getInstance(FileGenerator::class.java)
+        private const val SETUP_REQUIRED_MESSAGE =
+            "No enabled flutter_assets_generator modules found. Run 'Setup Project Configuration' first or set enable: true."
     }
 
     /** 为所有模块重新生成 */
     /** 为所有模块重新生成 */
     fun generateAll() {
-        val assets = FileHelperNew.getAssets(project) as MutableList
-        assets.removeAll {
-            println("module : ${it.module} assets ${it.assetVFiles}")
-            it.assetVFiles.isEmpty()
-        }
+        val assets = getEnabledConfigs()
         if (assets.isEmpty()) {
-            showNotify("Please configure your assets path in pubspec.yaml")
+            showNotify(SETUP_REQUIRED_MESSAGE)
             return
         }
         for (config in assets) {
@@ -48,6 +46,13 @@ class FileGenerator(private val project: Project) {
 
     /** 生成单个模块文件 (异步) */
     fun generateOne(config: ModulePubSpecConfig) {
+        if (!FileHelperNew.hasPluginConfig(config) || !FileHelperNew.isPluginEnabled(config)) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Plugin config missing or disabled, skipping generation"
+            )
+            return
+        }
+
         ProgressManager.getInstance()
             .run(
                 object :
@@ -70,6 +75,14 @@ class FileGenerator(private val project: Project) {
                     }
                 }
             )
+    }
+
+    private fun getEnabledConfigs(): List<ModulePubSpecConfig> {
+        return FileHelperNew.getAssets(project).filter {
+            FileHelperNew.hasPluginConfig(it) &&
+                    FileHelperNew.isPluginEnabled(it) &&
+                    it.assetVFiles.isNotEmpty()
+        }
     }
 
     private data class GenerationData(

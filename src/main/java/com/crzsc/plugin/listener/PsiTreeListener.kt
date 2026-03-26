@@ -57,32 +57,37 @@ class PsiTreeListener(private val project: Project) : PsiTreeChangeListener {
 
         val assets = FileHelperNew.getAssets(project)
         for (config in assets) {
-            if (FileHelperNew.isAutoDetectionEnable(config)) {
-                event.child?.let { changedFile ->
-                    val parentDir = changedFile.parent.castSafelyTo<PsiDirectory>()?.virtualFile
-                    if (parentDir != null) {
-                        for (assetFile in config.assetVFiles) {
-                            // 判断变更文件是否位于配置的 assets 目录下 (严格匹配，不递归)
-                            val isDirectChild =
-                                if (assetFile.isDirectory) {
-                                    assetFile == parentDir
-                                } else {
-                                    assetFile == changedFile
-                                }
+            if (!FileHelperNew.hasPluginConfig(config) ||
+                !FileHelperNew.isPluginEnabled(config) ||
+                !FileHelperNew.isAutoDetectionEnable(config)
+            ) {
+                continue
+            }
 
-                            if (isDirectChild) {
-                                // 资源文件变更响应较快,防抖时间设置为 300ms
-                                alarm.cancelAllRequests()
-                                alarm.addRequest(
-                                    {
-                                        if (!project.isDisposed) {
-                                            fileGenerator.generateOne(config)
-                                        }
-                                    },
-                                    300
-                                )
-                                return
+            event.child?.let { changedFile ->
+                val parentDir = changedFile.parent.castSafelyTo<PsiDirectory>()?.virtualFile
+                if (parentDir != null) {
+                    for (assetFile in config.assetVFiles) {
+                        // 判断变更文件是否位于配置的 assets 目录下 (严格匹配，不递归)
+                        val isDirectChild =
+                            if (assetFile.isDirectory) {
+                                assetFile == parentDir
+                            } else {
+                                assetFile == changedFile
                             }
+
+                        if (isDirectChild) {
+                            // 资源文件变更响应较快,防抖时间设置为 300ms
+                            alarm.cancelAllRequests()
+                            alarm.addRequest(
+                                {
+                                    if (!project.isDisposed) {
+                                        fileGenerator.generateOne(config)
+                                    }
+                                },
+                                300
+                            )
+                            return
                         }
                     }
                 }
