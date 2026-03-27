@@ -368,6 +368,48 @@ class DartClassGeneratorTest {
         assertFalse(generatedCode.contains("static const _GenIcons icons = _GenIcons();"))
     }
 
+    @Test
+    fun testRobustLeafTypeStringGeneratesHierarchicalStringLeaves() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        val iconsDir = directoryNode("icons", "assets/icons")
+        iconsDir.children.add(fileNode("user", "assets/icons/user.png", MediaType.IMAGE))
+        assetsDir.children.add(iconsDir)
+        root.children.add(assetsDir)
+
+        val generatedCode =
+            createGenerator(
+                root,
+                mapOf(Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING)
+            ).generate()
+
+        assertTrue(generatedCode.contains("static const _GenIcons icons = _GenIcons();"))
+        assertTrue(generatedCode.contains("final String user = 'assets/icons/user.png';"))
+        assertFalse(generatedCode.contains("class AssetGenImage {"))
+    }
+
+    @Test
+    fun testLegacyStyleIgnoresLeafTypeString() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        assetsDir.children.add(fileNode("logo", "assets/logo.png", MediaType.IMAGE))
+        root.children.add(assetsDir)
+
+        val generatedCode =
+            createGenerator(
+                root,
+                mapOf(
+                    "style" to "legacy",
+                    Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING
+                )
+            ).generate()
+
+        assertTrue(
+            generatedCode.contains("static const String logo = 'assets/logo.png';")
+        )
+        assertFalse(generatedCode.contains("class _GenAssets"))
+    }
+
     private fun createMockConfig(pluginConfig: Map<String, Any> = emptyMap()): ModulePubSpecConfig {
         val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
         Mockito.`when`(mockConfig.map)

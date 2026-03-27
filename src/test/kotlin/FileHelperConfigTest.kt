@@ -3,6 +3,7 @@ package com.crzsc.plugin.test
 import com.crzsc.plugin.utils.Constants
 import com.crzsc.plugin.utils.FileHelperNew
 import com.crzsc.plugin.utils.ModulePubSpecConfig
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -49,6 +50,26 @@ class FileHelperConfigTest {
         assertTrue(FileHelperNew.hasPluginConfig(config))
         assertFalse(FileHelperNew.isPluginEnabled(config))
         assertFalse(FileHelperNew.isAutoDetectionEnable(config))
+    }
+
+    @Test
+    fun testLeafTypeDefaultsToClassAndSupportsString() {
+        val defaultConfig =
+            createMockConfig(
+                mapOf(
+                    Constants.KEY_CONFIGURATION_MAP to emptyMap<String, Any>()
+                )
+            )
+        val stringConfig =
+            createMockConfig(
+                mapOf(
+                    Constants.KEY_CONFIGURATION_MAP to
+                            mapOf(Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING)
+                )
+            )
+
+        assertEquals(Constants.LEAF_TYPE_CLASS, FileHelperNew.getLeafType(defaultConfig))
+        assertEquals(Constants.LEAF_TYPE_STRING, FileHelperNew.getLeafType(stringConfig))
     }
 
     private fun createMockConfig(map: Map<String, Any>): ModulePubSpecConfig {

@@ -27,6 +27,9 @@ class DartClassGenerator(
     private val directoryClasses = StringBuilder()
     private val generatedDirectoryClassNames = mutableMapOf<String, String>()
     private val usedDirectoryClassNames = mutableSetOf<String>()
+    private val isStringLeafMode =
+        FileHelperNew.getGenerationStyle(config) == "robust" &&
+                FileHelperNew.getLeafType(config) == Constants.LEAF_TYPE_STRING
 
     fun generate(): String {
         val style = FileHelperNew.getGenerationStyle(config)
@@ -53,19 +56,21 @@ class DartClassGenerator(
         )
 
         // 生成 Imports
-        buffer.append("import 'package:flutter/widgets.dart';\n")
-        if (hasSvgDep) {
-            buffer.append("import 'package:flutter_svg/flutter_svg.dart';\n")
+        if (!isStringLeafMode) {
+            buffer.append("import 'package:flutter/widgets.dart';\n")
+            if (hasSvgDep) {
+                buffer.append("import 'package:flutter_svg/flutter_svg.dart';\n")
+            }
+            if (hasLottieDep) {
+                buffer.append("import 'package:lottie/lottie.dart';\n")
+                buffer.append("import 'package:lottie/src/lottie_builder.dart';\n")
+                buffer.append("import 'package:lottie/src/composition.dart';\n")
+            }
+            if (hasRiveDep) {
+                buffer.append("import 'package:rive/rive.dart' hide Image;\n")
+            }
+            buffer.append("\n")
         }
-        if (hasLottieDep) {
-            buffer.append("import 'package:lottie/lottie.dart';\n")
-            buffer.append("import 'package:lottie/src/lottie_builder.dart';\n")
-            buffer.append("import 'package:lottie/src/composition.dart';\n")
-        }
-        if (hasRiveDep) {
-            buffer.append("import 'package:rive/rive.dart' hide Image;\n")
-        }
-        buffer.append("\n")
 
         // 生成主类 (Root Class)
         val rootClassName = className
@@ -103,7 +108,9 @@ class DartClassGenerator(
         buffer.append(directoryClasses)
 
         // 生成辅助类 (AssetGenImage 等)
-        generateHelperClasses(packageName)
+        if (!isStringLeafMode) {
+            generateHelperClasses(packageName)
+        }
 
         return buffer.toString()
     }
@@ -306,40 +313,46 @@ class DartClassGenerator(
 
                 // 目录类的生成在 generate() 方法中统一处理
             } else {
-                // child.path 已经包含完整的相对路径,加上包名前缀即可
                 val fullPath = "$prefix${child.path}"
+                val leafPath = buildLeafPath(fullPath)
 
                 // 根据文件类型生成不同类型的字段
                 // 根类使用 static const,子目录类使用 final
-                when (child.type) {
-                    MediaType.IMAGE -> {
-                        buffer.append(
-                            "  ${if (isRoot) "static const" else "final"} AssetGenImage $fieldName = ${if (isRoot) "" else "const "}AssetGenImage('$fullPath');\n"
-                        )
-                    }
+                if (isStringLeafMode) {
+                    buffer.append(
+                        "  ${if (isRoot) "static const" else "final"} String $fieldName = '$leafPath';\n"
+                    )
+                } else {
+                    when (child.type) {
+                        MediaType.IMAGE -> {
+                            buffer.append(
+                                "  ${if (isRoot) "static const" else "final"} AssetGenImage $fieldName = ${if (isRoot) "" else "const "}AssetGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    MediaType.SVG -> {
-                        buffer.append(
-                            "  ${if (isRoot) "static const" else "final"} SvgGenImage $fieldName = ${if (isRoot) "" else "const "}SvgGenImage('$fullPath');\n"
-                        )
-                    }
+                        MediaType.SVG -> {
+                            buffer.append(
+                                "  ${if (isRoot) "static const" else "final"} SvgGenImage $fieldName = ${if (isRoot) "" else "const "}SvgGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    MediaType.LOTTIE -> {
-                        buffer.append(
-                            "  ${if (isRoot) "static const" else "final"} LottieGenImage $fieldName = ${if (isRoot) "" else "const "}LottieGenImage('$fullPath');\n"
-                        )
-                    }
+                        MediaType.LOTTIE -> {
+                            buffer.append(
+                                "  ${if (isRoot) "static const" else "final"} LottieGenImage $fieldName = ${if (isRoot) "" else "const "}LottieGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    MediaType.RIVE -> {
-                        buffer.append(
-                            "  ${if (isRoot) "static const" else "final"} RiveGenImage $fieldName = ${if (isRoot) "" else "const "}RiveGenImage('$fullPath');\n"
-                        )
-                    }
+                        MediaType.RIVE -> {
+                            buffer.append(
+                                "  ${if (isRoot) "static const" else "final"} RiveGenImage $fieldName = ${if (isRoot) "" else "const "}RiveGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    else -> {
-                        buffer.append(
-                            "  ${if (isRoot) "static const" else "final"} String $fieldName = '$fullPath';\n"
-                        )
+                        else -> {
+                            buffer.append(
+                                "  ${if (isRoot) "static const" else "final"} String $fieldName = '$fullPath';\n"
+                            )
+                        }
                     }
                 }
             }
@@ -523,37 +536,41 @@ class DartClassGenerator(
 
                 // 子目录类的生成已在 generateDirectoryClass 中递归处理
             } else {
-                // child.path 已经包含完整的相对路径,加上包名前缀即可
                 val fullPath = "$prefix${child.path}"
+                val leafPath = buildLeafPath(fullPath)
 
                 // 文件类型字段,使用 final
-                when (child.type) {
-                    MediaType.IMAGE -> {
-                        sb.append(
-                            "  final AssetGenImage $fieldName = const AssetGenImage('$fullPath');\n"
-                        )
-                    }
+                if (isStringLeafMode) {
+                    sb.append("  final String $fieldName = '$leafPath';\n")
+                } else {
+                    when (child.type) {
+                        MediaType.IMAGE -> {
+                            sb.append(
+                                "  final AssetGenImage $fieldName = const AssetGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    MediaType.SVG -> {
-                        sb.append(
-                            "  final SvgGenImage $fieldName = const SvgGenImage('$fullPath');\n"
-                        )
-                    }
+                        MediaType.SVG -> {
+                            sb.append(
+                                "  final SvgGenImage $fieldName = const SvgGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    MediaType.LOTTIE -> {
-                        sb.append(
-                            "  final LottieGenImage $fieldName = const LottieGenImage('$fullPath');\n"
-                        )
-                    }
+                        MediaType.LOTTIE -> {
+                            sb.append(
+                                "  final LottieGenImage $fieldName = const LottieGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    MediaType.RIVE -> {
-                        sb.append(
-                            "  final RiveGenImage $fieldName = const RiveGenImage('$fullPath');\n"
-                        )
-                    }
+                        MediaType.RIVE -> {
+                            sb.append(
+                                "  final RiveGenImage $fieldName = const RiveGenImage('$fullPath');\n"
+                            )
+                        }
 
-                    else -> {
-                        sb.append("  final String $fieldName = '$fullPath';\n")
+                        else -> {
+                            sb.append("  final String $fieldName = '$fullPath';\n")
+                        }
                     }
                 }
             }
@@ -1032,6 +1049,15 @@ $packageDecl
             suffix++
         }
         return className
+    }
+
+    private fun buildLeafPath(fullPath: String): String {
+        if (!isStringLeafMode || !FileHelperNew.isPackageParameterEnabled(config)) {
+            return fullPath
+        }
+
+        val packageName = config.map["name"] as? String ?: return fullPath
+        return "packages/$packageName/$fullPath"
     }
 
     private fun sanitizeName(name: String): String {

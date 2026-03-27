@@ -32,6 +32,7 @@ data class PubspecConfig(
     val pathIgnore: List<String>,
     val generationStyle: String, // "robust" (default), "legacy", "snake_case"
     val nameStyle: String,
+    val leafType: String,
     val packageParameterEnabled: Boolean
 ) {
     companion object {
@@ -90,6 +91,10 @@ data class PubspecConfig(
                 Constants.NAME_STYLE_SNAKE -> Constants.NAME_STYLE_SNAKE
                 else -> Constants.DEFAULT_NAME_STYLE
             }
+            val leafType = when (pluginConfig?.get(Constants.KEY_LEAF_TYPE) as? String) {
+                Constants.LEAF_TYPE_STRING -> Constants.LEAF_TYPE_STRING
+                else -> Constants.DEFAULT_LEAF_TYPE
+            }
             val packageParameterEnabled =
                 pluginConfig?.get(Constants.KEY_PACKAGE_PARAMETER_ENABLED) as? Boolean ?: false
 
@@ -110,6 +115,7 @@ data class PubspecConfig(
                 pathIgnore = pathIgnore,
                 generationStyle = generationStyle,
                 nameStyle = nameStyle,
+                leafType = leafType,
                 packageParameterEnabled = packageParameterEnabled
             )
         }
@@ -221,6 +227,7 @@ object PubspecConfigCache {
                 old.pathIgnore != new.pathIgnore ||
                 old.generationStyle != new.generationStyle ||
                 old.nameStyle != new.nameStyle ||
+                old.leafType != new.leafType ||
                 old.packageParameterEnabled != new.packageParameterEnabled
         // 注意:故意忽略 flutterSvgVersion, lottieVersion, flutterVersion, dartVersion
     }
@@ -285,6 +292,11 @@ object PubspecConfigCache {
         if (old.nameStyle != new.nameStyle) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}] name_style changed: ${old.nameStyle} -> ${new.nameStyle}"
+            )
+        }
+        if (old.leafType != new.leafType) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] leaf_type changed: ${old.leafType} -> ${new.leafType}"
             )
         }
         if (old.packageParameterEnabled != new.packageParameterEnabled) {

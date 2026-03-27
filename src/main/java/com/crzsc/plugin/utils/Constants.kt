@@ -28,6 +28,9 @@ object Constants {
     /** 命名风格 */
     const val KEY_NAME_STYLE = "name_style"
 
+    /** robust 风格叶子类型 */
+    const val KEY_LEAF_TYPE = "leaf_type"
+
     /** 输出的文件名 */
     const val KEY_OUTPUT_FILENAME = "output_filename"
 
@@ -41,8 +44,11 @@ object Constants {
     const val DEFAULT_OUTPUT_DIR = "generated"
     const val DEFAULT_CLASS_NAME = "Assets"
     const val DEFAULT_NAME_STYLE = "camel"
+    const val DEFAULT_LEAF_TYPE = "class"
     const val NAME_STYLE_CAMEL = "camel"
     const val NAME_STYLE_SNAKE = "snake"
+    const val LEAF_TYPE_CLASS = "class"
+    const val LEAF_TYPE_STRING = "string"
 
     const val DEFAULT_FILENAME_SPLIT_PATTERN = "[-_]"
 }

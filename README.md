@@ -46,6 +46,7 @@ flutter_assets_generator:
   auto_detection: true
   auto_add_dependencies: true
   style: robust # Options: robust (default), legacy (legacy)
+  leaf_type: class # Options: class (default), string
   name_style: camel # Options: camel (default), snake
   package_parameter_enabled: false
   path_ignore: []
@@ -71,6 +72,8 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
+  # For robust style: leaf type class (typed wrappers) or string (raw asset path). Default: class
+  leaf_type: class
   # Name style for generated identifiers. Default: camel
   name_style: camel
   # For legacy style: Prefix variable names with parent directory names. Default: true
@@ -78,6 +81,8 @@ flutter_assets_generator:
   # Ignore specific paths. Default: []
   path_ignore: ["assets/fonts"]
 ```
+
+When `style: robust` and `leaf_type: string`, the generator keeps the hierarchical API such as `Assets.icons.user`, but each leaf returns a raw `String` path. In this mode the plugin will not auto-add `flutter_svg`, `lottie`, or `rive`.
 
 Modules without a `flutter_assets_generator` block are not monitored automatically. If you run `Generate Assets` before initialization, the plugin will ask you to run `Setup Project Configuration` first.
 
@@ -160,6 +165,8 @@ flutter_assets_generator:
   # robust: 分层级风格 (Assets.images.logo)
   # legacy: 扁平风格 (Assets.imagesLogo)
   style: robust
+  # robust 风格下叶子类型: class(默认) 或 string
+  leaf_type: class
   # 命名风格: camel (默认) 或 snake
   name_style: camel
   package_parameter_enabled: false
@@ -188,6 +195,8 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # 生成风格: robust (分层级) 或 legacy (旧版扁平)。默认: robust
   style: robust
+  # robust 风格下叶子类型: class(包装类) 或 string(原始路径)。默认: class
+  leaf_type: class
   # 生成标识符的命名风格。默认: camel
   name_style: camel
   # 旧版兼容风格: 将变量名以父级目录名为前缀。默认: true
@@ -195,6 +204,8 @@ flutter_assets_generator:
   # 忽略的路径。默认: []
   path_ignore: ["assets/fonts"]
 ```
+
+当 `style: robust` 且 `leaf_type: string` 时，生成器会保留 `Assets.icons.user` 这类分层 API，但叶子节点直接返回原始 `String` 路径。该模式下插件不会自动添加 `flutter_svg`、`lottie` 或 `rive` 依赖。
 
 如果模块没有 `flutter_assets_generator` 配置块，插件不会自动监听。此时手动执行 `Generate Assets` 会提示先运行 `Setup Project Configuration` 完成初始化。
 

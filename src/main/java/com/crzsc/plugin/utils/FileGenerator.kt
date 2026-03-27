@@ -94,6 +94,15 @@ class FileGenerator(private val project: Project) {
         return configs.isEmpty()
     }
 
+    internal fun shouldAutoAddTypedDependencies(config: ModulePubSpecConfig): Boolean {
+        val isStringLeafMode =
+            FileHelperNew.getGenerationStyle(config) == "robust" &&
+                    FileHelperNew.getLeafType(config) == Constants.LEAF_TYPE_STRING
+        return !isStringLeafMode &&
+                FileHelperNew.isAutoDetectionEnable(config) &&
+                FileHelperNew.isAutoAddDependenciesEnable(config)
+    }
+
     private fun logExcludedGenerationCandidates(configs: List<ModulePubSpecConfig>) {
         for (config in configs) {
             val hasPluginConfig = FileHelperNew.hasPluginConfig(config)
@@ -148,9 +157,7 @@ class FileGenerator(private val project: Project) {
 
             val depsToAdd = mutableMapOf<String, String>()
 
-            if (FileHelperNew.isAutoDetectionEnable(config) &&
-                FileHelperNew.isAutoAddDependenciesEnable(config)
-            ) {
+            if (shouldAutoAddTypedDependencies(config)) {
                 if (hasSvg && !hasSvgDep) {
                     val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
                     depsToAdd["flutter_svg"] = svgVersion

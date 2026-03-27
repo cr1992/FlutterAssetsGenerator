@@ -110,6 +110,7 @@ class ListenerLogicTest {
             pathIgnore = emptyList(),
             generationStyle = "robust",
             nameStyle = "camel",
+            leafType = "class",
             packageParameterEnabled = false
         )
     }

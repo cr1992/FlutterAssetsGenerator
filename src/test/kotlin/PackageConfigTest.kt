@@ -1,6 +1,7 @@
 package com.crzsc.plugin.test
 
 import com.crzsc.plugin.utils.*
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.Mockito
@@ -180,5 +181,59 @@ class PackageConfigTest {
                 "static const String logoPng = 'packages/my_awesome_package/assets/logo.png';"
             )
         )
+    }
+
+    @Test
+    fun testRobustLeafTypeStringUsesPackagePrefixAndSkipsHelpers() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)
+        root.children.add(assetsDir)
+        assetsDir.children.add(
+            AssetNode("logo", "assets/logo.png", MediaType.IMAGE, null)
+        )
+        assetsDir.children.add(
+            AssetNode("home", "assets/home.svg", MediaType.SVG, null)
+        )
+
+        val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
+        Mockito.`when`(mockConfig.map).thenReturn(
+            mapOf(
+                "name" to "my_awesome_package",
+                Constants.KEY_CONFIGURATION_MAP to
+                        mapOf(
+                            Constants.KEY_PACKAGE_PARAMETER_ENABLED to true,
+                            Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING
+                        )
+            )
+        )
+
+        val code =
+            DartClassGenerator(
+                root,
+                mockConfig,
+                hasSvg = true,
+                hasSvgDep = true,
+                hasLottie = false,
+                hasLottieDep = false,
+                hasRive = false,
+                hasRiveDep = false,
+                flutterVersion = null
+            )
+                .generate()
+
+        assertTrue(
+            code.contains(
+                "static const String logo = 'packages/my_awesome_package/assets/logo.png';"
+            )
+        )
+        assertTrue(
+            code.contains(
+                "static const String home = 'packages/my_awesome_package/assets/home.svg';"
+            )
+        )
+        assertFalse(code.contains("import 'package:flutter/widgets.dart';"))
+        assertFalse(code.contains("import 'package:flutter_svg/flutter_svg.dart';"))
+        assertFalse(code.contains("class AssetGenImage {"))
+        assertFalse(code.contains("class SvgGenImage {"))
     }
 }

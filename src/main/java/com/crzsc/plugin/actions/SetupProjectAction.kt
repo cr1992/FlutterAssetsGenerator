@@ -78,6 +78,8 @@ class SetupProjectAction : AnAction() {
                   auto_add_dependencies: true
                   # Options: robust (default), legacy (old style)
                   style: robust
+                  # For robust style: class (default) or string
+                  leaf_type: class
                   # Options: camel (default), snake
                   name_style: camel
                   package_parameter_enabled: false

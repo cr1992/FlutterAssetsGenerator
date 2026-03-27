@@ -31,7 +31,8 @@ class PubspecConfigTest {
                             "filename_split_pattern" to "_",
                             "path_ignore" to listOf("ignore_me"),
                             "style" to "legacy",
-                            "name_style" to "snake"
+                            "name_style" to "snake",
+                            "leaf_type" to "string"
                         )
             )
 
@@ -60,6 +61,7 @@ class PubspecConfigTest {
         assertEquals("ignore_me", config.pathIgnore[0])
         assertEquals("legacy", config.generationStyle)
         assertEquals("snake", config.nameStyle)
+        assertEquals("string", config.leafType)
         assertFalse(config.packageParameterEnabled)
     }
 
@@ -80,6 +82,7 @@ class PubspecConfigTest {
         assertEquals("[-_]", config.filenameSplitPattern)
         assertEquals("robust", config.generationStyle)
         assertEquals("camel", config.nameStyle)
+        assertEquals("class", config.leafType)
         assertFalse(config.packageParameterEnabled)
     }
 
@@ -163,6 +166,15 @@ class PubspecConfigTest {
                 )
             )
         )
+
+        // 5. Leaf Type changed -> TRUE
+        assertTrue(
+            PubspecConfigCache.hasChanged(
+                project,
+                modulePath,
+                baseConfig.copy(leafType = "string")
+            )
+        )
     }
 
     private fun createBaseConfig(): PubspecConfig {
@@ -183,6 +195,7 @@ class PubspecConfigTest {
             pathIgnore = emptyList(),
             generationStyle = "robust",
             nameStyle = "camel",
+            leafType = "class",
             packageParameterEnabled = false
         )
     }

@@ -206,6 +206,14 @@ object FileHelperNew {
         }
     }
 
+    /** 读取 robust 风格叶子类型配置 */
+    fun getLeafType(config: ModulePubSpecConfig): String {
+        return when (readSetting(config, Constants.KEY_LEAF_TYPE) as? String) {
+            Constants.LEAF_TYPE_STRING -> Constants.LEAF_TYPE_STRING
+            else -> Constants.DEFAULT_LEAF_TYPE
+        }
+    }
+
     /** 读取生成的类名配置 */
     fun getGeneratedClassName(config: ModulePubSpecConfig): String {
         return readSetting(config, Constants.KEY_CLASS_NAME) as String?

@@ -38,6 +38,37 @@ class FileGeneratorLogicTest {
         assertFalse(generator.shouldShowSetupPrompt(listOf(mockConfig(true, true, true))))
     }
 
+    @Test
+    fun testLeafTypeStringDisablesTypedDependencyAutoAdd() {
+        val generator = FileGenerator(mockProject())
+        val classLeaf =
+            mockConfig(
+                hasPluginConfig = true,
+                enable = true,
+                withAssets = true,
+                pluginConfig =
+                    mapOf(
+                        Constants.KEY_AUTO_DETECTION to true,
+                        Constants.KEY_AUTO_ADD_DEPENDENCIES to true
+                    )
+            )
+        val stringLeaf =
+            mockConfig(
+                hasPluginConfig = true,
+                enable = true,
+                withAssets = true,
+                pluginConfig =
+                    mapOf(
+                        Constants.KEY_AUTO_DETECTION to true,
+                        Constants.KEY_AUTO_ADD_DEPENDENCIES to true,
+                        Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING
+                    )
+            )
+
+        assertTrue(generator.shouldAutoAddTypedDependencies(classLeaf))
+        assertFalse(generator.shouldAutoAddTypedDependencies(stringLeaf))
+    }
+
     private fun mockProject(): Project {
         val project = Mockito.mock(Project::class.java)
         Mockito.`when`(project.name).thenReturn("TestProject")
@@ -47,14 +78,16 @@ class FileGeneratorLogicTest {
     private fun mockConfig(
         hasPluginConfig: Boolean,
         enable: Boolean,
-        withAssets: Boolean
+        withAssets: Boolean,
+        pluginConfig: Map<String, Any> = emptyMap()
     ): ModulePubSpecConfig {
         val config = Mockito.mock(ModulePubSpecConfig::class.java)
         val map =
             if (hasPluginConfig) {
+                val fullPluginConfig = mutableMapOf<String, Any>(Constants.KEY_ENABLE to enable)
+                fullPluginConfig.putAll(pluginConfig)
                 mapOf(
-                    Constants.KEY_CONFIGURATION_MAP to
-                            mapOf(Constants.KEY_ENABLE to enable)
+                    Constants.KEY_CONFIGURATION_MAP to fullPluginConfig
                 )
             } else {
                 emptyMap()
