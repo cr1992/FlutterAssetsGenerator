@@ -3,6 +3,7 @@ package com.crzsc.plugin.utils
 import com.crzsc.plugin.utils.PluginUtils.toLowCamelCase
 import com.intellij.openapi.diagnostic.Logger
 import java.text.Normalizer
+import java.util.Locale
 
 /** Dart 代码生成器 负责将资源树转换为 Dart 类结构 */
 class DartClassGenerator(
@@ -24,6 +25,8 @@ class DartClassGenerator(
 
     // 用于收集额外的类（目录类），它们将被追加到主类之后
     private val directoryClasses = StringBuilder()
+    private val generatedDirectoryClassNames = mutableMapOf<String, String>()
+    private val usedDirectoryClassNames = mutableSetOf<String>()
 
     fun generate(): String {
         val style = FileHelperNew.getGenerationStyle(config)
@@ -406,7 +409,9 @@ class DartClassGenerator(
 
     /** 判断是否应该扁平化根节点 当根节点只有一个目录子节点时,应该扁平化 */
     private fun shouldFlattenRoot(node: AssetNode): Boolean {
-        return node.children.size == 1 && node.children[0].type == MediaType.DIRECTORY
+        return node.children.size == 1 &&
+                node.children[0].type == MediaType.DIRECTORY &&
+                node.children[0].name == "assets"
     }
 
     // 存储基础包名前缀,用于所有目录类
@@ -978,13 +983,55 @@ $packageDecl
 
     /** 生成目录对应的类名 策略: 使用节点名称转换为驼峰命名 + "Gen" 后缀,并在前面加上 "$" 符号和根类名 例如: image 目录 -> $AssetsImageGen */
     private fun getGenClassName(node: AssetNode): String {
-        val safeName = sanitizeName(node.name).replace(Regex("[-.]"), "_")
-        val camelCaseName =
-            safeName
+        return generatedDirectoryClassNames.getOrPut(node.path) {
+            val pathSegments =
+                node.path
+                    .split("/")
+                    .filter { it.isNotEmpty() }
+                    .let { segments ->
+                        if (shouldFlattenPathForClassName(segments)) segments.drop(1) else segments
+                    }
+
+            val baseClassName =
+                buildString {
+                    append("_Gen")
+                    pathSegments.forEach { segment -> append(toPascalCaseSegment(segment)) }
+                }
+
+            uniqueDirectoryClassName(baseClassName)
+        }
+    }
+
+    private fun shouldFlattenPathForClassName(pathSegments: List<String>): Boolean {
+        return rootNode.children.size == 1 &&
+                rootNode.children[0].type == MediaType.DIRECTORY &&
+                rootNode.children[0].name == "assets" &&
+                pathSegments.firstOrNull() == "assets"
+    }
+
+    private fun toPascalCaseSegment(segment: String): String {
+        val sanitized =
+            sanitizeName(segment)
+                .replace(Regex("[-.]"), "_")
                 .split("_")
                 .filter { it.isNotEmpty() }
-                .joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
-        return "$" + FileHelperNew.getGeneratedClassName(config) + camelCaseName + "Gen"
+                .joinToString("") { part ->
+                    part.lowercase(Locale.getDefault()).replaceFirstChar { it.uppercase() }
+                }
+
+        return sanitized.ifEmpty { "Unnamed" }.let {
+            if (it.first().isDigit()) "A$it" else it
+        }
+    }
+
+    private fun uniqueDirectoryClassName(baseClassName: String): String {
+        var className = baseClassName
+        var suffix = 2
+        while (!usedDirectoryClassNames.add(className)) {
+            className = "${baseClassName}${suffix}"
+            suffix++
+        }
+        return className
     }
 
     private fun sanitizeName(name: String): String {
