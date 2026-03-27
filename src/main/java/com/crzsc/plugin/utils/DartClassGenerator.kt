@@ -1011,7 +1011,9 @@ $packageDecl
 
             val baseClassName =
                 buildString {
-                    append("_Gen")
+                    append("$")
+                    append(FileHelperNew.getGeneratedClassName(config))
+                    append("Gen")
                     pathSegments.forEach { segment -> append(toPascalCaseSegment(segment)) }
                 }
 

@@ -285,12 +285,20 @@ class DartClassGeneratorTest {
 
         val generatedCode = createGenerator(root).generate()
 
-        assertTrue(generatedCode.contains("static const _GenIcons icons = _GenIcons();"))
-        assertTrue(generatedCode.contains("static const _GenImages images = _GenImages();"))
-        assertTrue(generatedCode.contains("final _GenIconsMyFolder myFolder = const _GenIconsMyFolder();"))
-        assertTrue(generatedCode.contains("final _GenImagesMyFolder myFolder = const _GenImagesMyFolder();"))
-        assertTrue(generatedCode.contains("class _GenIconsMyFolder {"))
-        assertTrue(generatedCode.contains("class _GenImagesMyFolder {"))
+        assertTrue(generatedCode.contains("static const \$AssetsGenIcons icons = \$AssetsGenIcons();"))
+        assertTrue(generatedCode.contains("static const \$AssetsGenImages images = \$AssetsGenImages();"))
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenIconsMyFolder myFolder = const \$AssetsGenIconsMyFolder();"
+            )
+        )
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenImagesMyFolder myFolder = const \$AssetsGenImagesMyFolder();"
+            )
+        )
+        assertTrue(generatedCode.contains("class \$AssetsGenIconsMyFolder {"))
+        assertTrue(generatedCode.contains("class \$AssetsGenImagesMyFolder {"))
     }
 
     @Test
@@ -317,9 +325,9 @@ class DartClassGeneratorTest {
 
         val generatedCode = createGenerator(root).generate()
 
-        assertTrue(generatedCode.contains("class _GenAssetsIconsCommon {"))
-        assertTrue(generatedCode.contains("class _GenBrandingAssetsIconsCommon {"))
-        assertFalse(generatedCode.contains("class _GenCommon {"))
+        assertTrue(generatedCode.contains("class \$AssetsGenAssetsIconsCommon {"))
+        assertTrue(generatedCode.contains("class \$AssetsGenBrandingAssetsIconsCommon {"))
+        assertFalse(generatedCode.contains("class \$AssetsGenCommon {"))
     }
 
     @Test
@@ -339,16 +347,20 @@ class DartClassGeneratorTest {
 
         val generatedCode = createGenerator(root).generate()
 
-        assertTrue(generatedCode.contains("static const _GenImages images = _GenImages();"))
-        assertTrue(generatedCode.contains("final _GenImagesDrawer drawer = const _GenImagesDrawer();"))
+        assertTrue(generatedCode.contains("static const \$AssetsGenImages images = \$AssetsGenImages();"))
         assertTrue(
             generatedCode.contains(
-                "final _GenImagesDrawerBackgrounds backgrounds = const _GenImagesDrawerBackgrounds();"
+                "final \$AssetsGenImagesDrawer drawer = const \$AssetsGenImagesDrawer();"
+            )
+        )
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenImagesDrawerBackgrounds backgrounds = const \$AssetsGenImagesDrawerBackgrounds();"
             )
         )
         assertFalse(
             generatedCode.contains(
-                "final _GenImagesBackgrounds backgrounds = const _GenImagesBackgrounds();"
+                "final \$AssetsGenImagesBackgrounds backgrounds = const \$AssetsGenImagesBackgrounds();"
             )
         )
     }
@@ -364,8 +376,16 @@ class DartClassGeneratorTest {
 
         val generatedCode = createGenerator(root).generate()
 
-        assertTrue(generatedCode.contains("static const _GenBranding branding = _GenBranding();"))
-        assertFalse(generatedCode.contains("static const _GenIcons icons = _GenIcons();"))
+        assertTrue(
+            generatedCode.contains(
+                "static const \$AssetsGenBranding branding = \$AssetsGenBranding();"
+            )
+        )
+        assertFalse(
+            generatedCode.contains(
+                "static const \$AssetsGenIcons icons = \$AssetsGenIcons();"
+            )
+        )
     }
 
     @Test
@@ -383,7 +403,11 @@ class DartClassGeneratorTest {
                 mapOf(Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING)
             ).generate()
 
-        assertTrue(generatedCode.contains("static const _GenIcons icons = _GenIcons();"))
+        assertTrue(
+            generatedCode.contains(
+                "static const \$AssetsGenIcons icons = \$AssetsGenIcons();"
+            )
+        )
         assertTrue(generatedCode.contains("final String user = 'assets/icons/user.png';"))
         assertFalse(generatedCode.contains("class AssetGenImage {"))
     }
@@ -407,7 +431,7 @@ class DartClassGeneratorTest {
         assertTrue(
             generatedCode.contains("static const String logo = 'assets/logo.png';")
         )
-        assertFalse(generatedCode.contains("class _GenAssets"))
+        assertFalse(generatedCode.contains("class \$AssetsGenAssets"))
     }
 
     private fun createMockConfig(pluginConfig: Map<String, Any> = emptyMap()): ModulePubSpecConfig {
