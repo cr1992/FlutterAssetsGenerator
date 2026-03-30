@@ -1,14 +1,16 @@
 package com.crzsc.plugin.test
 
 import com.crzsc.plugin.cache.PubspecConfig
-import com.crzsc.plugin.listener.PsiTreeListener
 import com.crzsc.plugin.listener.PubspecDocumentListener
+import com.crzsc.plugin.listener.VfsAssetListener
 import com.crzsc.plugin.utils.Constants
 import com.crzsc.plugin.utils.ModulePubSpecConfig
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiTreeChangeEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
+import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,30 +34,44 @@ class ListenerLogicTest {
     }
 
     @Test
-    fun testPsiTreeListenerConfigAndAssetMatchingLogic() {
-        val listener = PsiTreeListener(mockProject())
+    fun testVfsAssetListenerConfigAndAssetMatchingLogic() {
+        val listener = VfsAssetListener(mockProject())
         val enabledConfig = mockConfig(hasPluginConfig = true, enable = true, autoDetection = true)
         val disabledConfig = mockConfig(hasPluginConfig = true, enable = false, autoDetection = true)
 
         assertTrue(listener.shouldHandleConfig(enabledConfig))
         assertFalse(listener.shouldHandleConfig(disabledConfig))
 
-        val assetDir = Mockito.mock(VirtualFile::class.java)
-        Mockito.`when`(assetDir.isDirectory).thenReturn(true)
-        Mockito.`when`(enabledConfig.assetVFiles).thenReturn(listOf(assetDir))
+        val moduleRoot = mockVirtualFile("/project", true, null)
+        val assetDir = mockVirtualFile("/project/assets", true, moduleRoot)
+        val envFile = mockVirtualFile("/project/.test.env", false, moduleRoot)
+        Mockito.`when`(enabledConfig.assetVFiles).thenReturn(listOf(assetDir, envFile))
 
-        assertTrue(listener.isDirectAssetChild(enabledConfig, assetDir, Mockito.mock(Any::class.java)))
-        assertFalse(listener.isDirectAssetChild(enabledConfig, Mockito.mock(VirtualFile::class.java), Mockito.mock(Any::class.java)))
+        assertTrue(listener.isAssetChange(enabledConfig, "/project/assets"))
+        assertTrue(listener.isAssetChange(enabledConfig, "/project/assets/icons/home.png"))
+        assertTrue(listener.isAssetChange(enabledConfig, "/project/.test.env"))
+        assertFalse(listener.isAssetChange(enabledConfig, "/project/lib/main.dart"))
+    }
+
+    @Test
+    fun testCollectCandidatePathsUsesEventPath() {
+        val listener = VfsAssetListener(mockProject())
+        val event = Mockito.mock(VFileEvent::class.java)
+        Mockito.`when`(event.path).thenReturn("/project/assets/icons/home.png")
+        Mockito.`when`(event.file).thenReturn(null)
+
+        val candidates = listener.collectCandidatePaths(event)
+        assertEquals(listOf("/project/assets/icons/home.png"), candidates)
     }
 
     @Test
     fun testPendingEventsCollectedCorrectly() {
-        val listener = PsiTreeListener(mockProject())
+        val listener = VfsAssetListener(mockProject())
 
         // 模拟多个事件加入 pendingEvents
-        val event1 = Mockito.mock(PsiTreeChangeEvent::class.java)
-        val event2 = Mockito.mock(PsiTreeChangeEvent::class.java)
-        val event3 = Mockito.mock(PsiTreeChangeEvent::class.java)
+        val event1 = Mockito.mock(VFileEvent::class.java)
+        val event2 = Mockito.mock(VFileEvent::class.java)
+        val event3 = Mockito.mock(VFileEvent::class.java)
 
         listener.pendingEvents.add(event1)
         listener.pendingEvents.add(event2)
@@ -70,16 +86,16 @@ class ListenerLogicTest {
 
     @Test
     fun testPendingEventsClearAndReuse() {
-        val listener = PsiTreeListener(mockProject())
+        val listener = VfsAssetListener(mockProject())
 
         // 加入一批事件
         repeat(10) {
-            listener.pendingEvents.add(Mockito.mock(PsiTreeChangeEvent::class.java))
+            listener.pendingEvents.add(Mockito.mock(VFileEvent::class.java))
         }
         assertEquals(10, listener.pendingEvents.size)
 
         // 模拟 processPendingEvents 中的 toList + clear 逻辑
-        val snapshot: List<PsiTreeChangeEvent>
+        val snapshot: List<VFileEvent>
         synchronized(listener.pendingEvents) {
             snapshot = listener.pendingEvents.toList()
             listener.pendingEvents.clear()
@@ -88,8 +104,44 @@ class ListenerLogicTest {
         assertEquals(0, listener.pendingEvents.size)
 
         // 清空后新事件仍可正常收集
-        listener.pendingEvents.add(Mockito.mock(PsiTreeChangeEvent::class.java))
+        listener.pendingEvents.add(Mockito.mock(VFileEvent::class.java))
         assertEquals(1, listener.pendingEvents.size)
+    }
+
+    @Test
+    fun testCollectCandidatePathsForRenameIncludesOldAndNewPath() {
+        val listener = VfsAssetListener(mockProject())
+        val parent = mockVirtualFile("/project/assets/icons", true, null)
+        val file = mockVirtualFile("/project/assets/icons/new.png", false, parent)
+        val event = Mockito.mock(VFilePropertyChangeEvent::class.java)
+
+        Mockito.`when`(event.path).thenReturn("/project/assets/icons/new.png")
+        Mockito.`when`(event.file).thenReturn(file)
+        Mockito.`when`(event.propertyName).thenReturn(VirtualFile.PROP_NAME)
+        Mockito.`when`(event.oldValue).thenReturn("old.png")
+        Mockito.`when`(event.newValue).thenReturn("new.png")
+
+        val candidates = listener.collectCandidatePaths(event)
+        assertTrue(candidates.contains("/project/assets/icons/old.png"))
+        assertTrue(candidates.contains("/project/assets/icons/new.png"))
+    }
+
+    @Test
+    fun testCollectCandidatePathsForMoveIncludesOldAndNewPath() {
+        val listener = VfsAssetListener(mockProject())
+        val oldParent = mockVirtualFile("/project/assets/icons", true, null)
+        val newParent = mockVirtualFile("/project/assets/widget", true, null)
+        val file = mockVirtualFile("/project/assets/widget/moved.png", false, newParent)
+        val event = Mockito.mock(VFileMoveEvent::class.java)
+
+        Mockito.`when`(event.path).thenReturn("/project/assets/widget/moved.png")
+        Mockito.`when`(event.file).thenReturn(file)
+        Mockito.`when`(event.oldParent).thenReturn(oldParent)
+        Mockito.`when`(file.name).thenReturn("moved.png")
+
+        val candidates = listener.collectCandidatePaths(event)
+        assertTrue(candidates.contains("/project/assets/widget/moved.png"))
+        assertTrue(candidates.contains("/project/assets/icons/moved.png"))
     }
 
     private fun basePubspecConfig(): PubspecConfig {
@@ -140,7 +192,22 @@ class ListenerLogicTest {
                 emptyMap()
             }
         Mockito.`when`(config.map).thenReturn(map)
+        val module = Mockito.mock(Module::class.java)
+        Mockito.`when`(module.name).thenReturn("TestModule")
+        Mockito.`when`(config.module).thenReturn(module)
         Mockito.`when`(config.assetVFiles).thenReturn(emptyList())
         return config
+    }
+
+    private fun mockVirtualFile(
+        path: String,
+        isDirectory: Boolean,
+        parent: VirtualFile?
+    ): VirtualFile {
+        val file = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(file.path).thenReturn(path)
+        Mockito.`when`(file.isDirectory).thenReturn(isDirectory)
+        Mockito.`when`(file.parent).thenReturn(parent)
+        return file
     }
 }

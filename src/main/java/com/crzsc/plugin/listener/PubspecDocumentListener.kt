@@ -18,6 +18,7 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
     companion object {
         private val LOG = Logger.getInstance(PubspecDocumentListener::class.java)
+        private const val TAG = "[FAG-PUBSPEC]"
 
         internal fun shouldTriggerGeneration(newConfig: PubspecConfig, hasChanged: Boolean): Boolean {
             return hasChanged &&
@@ -41,7 +42,7 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
     private fun handlePubspecSave(pubspecFile: VirtualFile, document: Document) {
         LOG.info(
-            "[FlutterAssetsGenerator #${project.name}] pubspec.yaml saved: ${pubspecFile.path}"
+            "$TAG project=${project.name} saved=${pubspecFile.path}"
         )
 
         val config =
@@ -58,10 +59,13 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
                     val newConfig = PubspecConfig.fromMap(data)
                     val hasChanged = PubspecConfigCache.hasChanged(project, modulePath, newConfig)
+                    LOG.info(
+                        "$TAG module=${config.module.name} assetPaths=${newConfig.assetPaths} hasPluginConfig=${newConfig.hasPluginConfig} pluginEnabled=${newConfig.pluginEnabled} autoDetection=${newConfig.autoDetection} hasChanged=$hasChanged"
+                    )
 
                     if (!hasChanged) {
                         LOG.info(
-                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config unchanged, skipping generation"
+                            "$TAG module=${config.module.name} config-unchanged skip-generation"
                         )
                         return@invokeLater
                     }
@@ -70,13 +74,13 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
                     if (!shouldTriggerGeneration(newConfig, hasChanged = true)) {
                         LOG.info(
-                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Plugin config missing, disabled, or auto_detection off; skipping generation"
+                            "$TAG module=${config.module.name} skip-generation reason=config-disabled-or-missing"
                         )
                         return@invokeLater
                     }
 
                     LOG.info(
-                        "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config changed, triggering generation"
+                        "$TAG module=${config.module.name} config-changed trigger-generation"
                     )
 
                     val updatedConfig =
@@ -87,15 +91,18 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
                         )
 
                     if (updatedConfig != null) {
+                        LOG.info(
+                            "$TAG module=${config.module.name} reloaded-assetVFiles=${updatedConfig.assetVFiles.map { it.path }}"
+                        )
                         fileGenerator.generateOne(updatedConfig)
                     } else {
                         LOG.error(
-                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Failed to reload config for generation"
+                            "$TAG module=${config.module.name} failed-to-reload-config-for-generation"
                         )
                     }
                 } catch (e: Exception) {
                     LOG.error(
-                        "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Processing failed",
+                        "$TAG module=${config.module.name} processing-failed",
                         e
                     )
                 }
