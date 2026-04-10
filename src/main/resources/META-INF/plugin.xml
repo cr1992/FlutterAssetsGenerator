@@ -2,7 +2,7 @@
     <id>com.crzsc.FlutterAssetsGenerator</id>
     <name>FlutterAssetsGenerator</name>
     <icon src="/META-INF/pluginIcon.svg"/>
-    <vendor email="cr1992@qq.com" url="https://github.com/cr1992/FlutterAssetsGenerator">Ray&amp;Zsc</vendor>
+    <vendor email="cr1992@qq.com" url="https://github.com/cr1992/FlutterAssetsGenerator">Ray</vendor>
 
     <description><![CDATA[
 A powerful Android Studio / IntelliJ plugin that automatically generates type-safe, hierarchical asset index for your Flutter projects. Supports SVG, Lottie, and automatic dependency management with smart widget integration.
@@ -11,10 +11,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates type-sa
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
     <depends>com.intellij.modules.json</depends>
-    <depends>com.intellij.modules.lang</depends>
-    <!--    <depends>com.intellij.modules.java</depends>-->
     <depends>com.intellij.modules.all</depends>
-    <depends>com.intellij.modules.platform</depends>
     <depends>Dart</depends>
     <depends>org.jetbrains.kotlin</depends>
     <depends>io.flutter</depends>
