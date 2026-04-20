@@ -33,9 +33,13 @@ class SetupCurrentModuleAction : AnAction() {
             return
         }
 
+        val packageParameterEnabled =
+            SetupConfigurationHelper.shouldEnablePackageParameterByDefault(project, config)
         val configured = SetupConfigurationHelper.addDefaultConfiguration(project, config)
         if (configured) {
-            showNotify("Configured module ${config.module.name} with default settings")
+            showNotify(
+                "Configured module ${config.module.name} with package_parameter_enabled=$packageParameterEnabled"
+            )
         } else {
             showNotify("Module ${config.module.name} already has flutter_assets_generator configuration")
         }

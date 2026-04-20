@@ -18,6 +18,7 @@ import kotlin.system.measureTimeMillis
 
 object SetupConfigurationHelper {
     private val LOG = Logger.getInstance(SetupConfigurationHelper::class.java)
+    private val appPlatformDirs = listOf("android", "ios", "web", "macos", "linux", "windows")
 
     fun findTargetConfig(
         configs: List<ModulePubSpecConfig>,
@@ -98,6 +99,14 @@ object SetupConfigurationHelper {
      * @return true 如果成功添加配置，false 如果配置已存在或写入失败
      */
     fun addDefaultConfiguration(project: Project, config: ModulePubSpecConfig): Boolean {
+        return addDefaultConfiguration(project, config, null)
+    }
+
+    fun addDefaultConfiguration(
+        project: Project,
+        config: ModulePubSpecConfig,
+        packageParameterEnabledOverride: Boolean?
+    ): Boolean {
         val pubspecFile = config.pubRoot.pubspec
         val yamlFile =
             PsiManager.getInstance(project).findFile(pubspecFile) as? YAMLFile ?: return false
@@ -112,25 +121,7 @@ object SetupConfigurationHelper {
         WriteCommandAction.runWriteCommandAction(project) {
             val generator = YAMLElementGenerator.getInstance(project)
             val configContent =
-                """
-                flutter_assets_generator:
-                  enable: true
-                  output_dir: generated/
-                  output_filename: assets
-                  class_name: Assets
-                  auto_detection: true
-                  # Automatically add missing dependencies (rive, flutter_svg, lottie) default: true
-                  auto_add_dependencies: true
-                  # Options: robust (default), legacy (old style)
-                  style: robust
-                  # For robust style: class (default) or string
-                  leaf_type: class
-                  # Options: camel (default), snake
-                  name_style: camel
-                  package_parameter_enabled: false
-                  named_with_parent: true
-                  path_ignore: []
-                """.trimIndent()
+                buildDefaultConfigurationContent(project, config, packageParameterEnabledOverride)
 
             val dummyYaml = generator.createDummyYamlWithText(configContent)
             val configMapping =
@@ -143,5 +134,66 @@ object SetupConfigurationHelper {
         }
 
         return added
+    }
+
+    internal fun buildDefaultConfigurationContent(
+        project: Project,
+        config: ModulePubSpecConfig,
+        packageParameterEnabledOverride: Boolean? = null
+    ): String {
+        val packageParameterEnabled =
+            packageParameterEnabledOverride
+                ?: shouldEnablePackageParameterByDefault(project, config)
+        return """
+            flutter_assets_generator:
+              enable: true
+              output_dir: generated/
+              output_filename: assets
+              class_name: Assets
+              auto_detection: true
+              # Automatically add missing dependencies (rive, flutter_svg, lottie) default: true
+              auto_add_dependencies: true
+              # Options: robust (default), legacy (old style)
+              style: robust
+              # For robust style: class (default) or string
+              leaf_type: class
+              # Options: camel (default), snake
+              name_style: camel
+              package_parameter_enabled: $packageParameterEnabled
+              named_with_parent: true
+              path_ignore: []
+            """.trimIndent()
+    }
+
+    internal fun shouldEnablePackageParameterByDefault(
+        @Suppress("UNUSED_PARAMETER") project: Project,
+        config: ModulePubSpecConfig
+    ): Boolean {
+        return !isFlutterApp(config) && !isAddToAppModule(config)
+    }
+
+    internal fun isFlutterApp(config: ModulePubSpecConfig): Boolean {
+        val moduleDir = config.pubRoot.root
+        val hasMainEntry = moduleDir.findFileByRelativePath("lib/main.dart") != null
+        if (!hasMainEntry) {
+            return false
+        }
+        return appPlatformDirs.any { dir -> moduleDir.findChild(dir)?.isDirectory == true }
+    }
+
+    internal fun isAddToAppModule(config: ModulePubSpecConfig): Boolean {
+        val moduleDir = config.pubRoot.root
+        if (moduleDir.findChild(".android")?.isDirectory == true ||
+            moduleDir.findChild(".ios")?.isDirectory == true
+        ) {
+            return true
+        }
+        return isAddToAppModule(config.map)
+    }
+
+    internal fun isAddToAppModule(pubspecMap: Map<String, Any>): Boolean {
+        val flutterMap = pubspecMap["flutter"] as? Map<*, *> ?: return false
+        val moduleMap = flutterMap["module"] as? Map<*, *> ?: return false
+        return moduleMap.isNotEmpty()
     }
 }

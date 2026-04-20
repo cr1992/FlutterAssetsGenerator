@@ -43,6 +43,8 @@ Project activation and module setup follow these rules:
 - A valid Flutter module must be rooted at its own `pubspec.yaml` directory and contain Flutter configuration (`flutter:` or Flutter SDK dependency).
 - Temporary generated directories such as `.dart_tool`, `build`, `.symlinks`, `.plugin_symlinks`, and `ephemeral` are excluded from module detection.
 - The Project View setup entry is shown only when the selected directory exactly matches a Flutter module root. Child folders such as `lib/` or `assets/` do not show the entry.
+- `package_parameter_enabled` defaults to `false` for Flutter apps and add-to-app Flutter modules, and defaults to `true` for other Flutter packages.
+- Both project-level setup and current-module setup use the same automatic defaults.
 
 This will automatically add the default configuration to your `pubspec.yaml`:
 
@@ -57,7 +59,7 @@ flutter_assets_generator:
   style: robust # Options: robust (default), legacy (legacy)
   leaf_type: class # Options: class (default), string
   name_style: camel # Options: camel (default), snake
-  package_parameter_enabled: false
+  package_parameter_enabled: false # Flutter packages default to true
   path_ignore: []
 ```
 
@@ -169,6 +171,8 @@ String path = Assets.images.logo.path;
 -   合法 Flutter 模块必须以其自身的 `pubspec.yaml` 所在目录为根目录，并且配置中包含 Flutter 信息（`flutter:` 节点或 Flutter SDK 依赖）。
 -   `.dart_tool`、`build`、`.symlinks`、`.plugin_symlinks`、`ephemeral` 这类临时生成目录不会参与模块识别。
 -   项目树右键入口只会在“精确命中 Flutter 模块根目录”时显示，像 `lib/`、`assets/` 这样的子目录不会显示该入口。
+-   对 Flutter app 和 add-to-app Flutter module，`package_parameter_enabled` 默认是 `false`；其他 Flutter package 默认是 `true`。
+-   项目级 setup 和单模块 setup 统一走同一套自动默认逻辑。
 
 这将自动在您的 `pubspec.yaml` 中添加默认配置：
 
@@ -188,7 +192,7 @@ flutter_assets_generator:
   leaf_type: class
   # 命名风格: camel (默认) 或 snake
   name_style: camel
-  package_parameter_enabled: false
+  package_parameter_enabled: false # Flutter package 默认会写成 true
   path_ignore: []
 ```
 

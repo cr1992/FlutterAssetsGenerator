@@ -2,6 +2,8 @@
 
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [Unreleased]
+- **Module-Type Package Defaults**: Setup now defaults `package_parameter_enabled` to `false` for Flutter apps and add-to-app Flutter modules, and to `true` for other Flutter packages.
+  - **模块类型默认值**: 一键配置现在会对 Flutter app 和 add-to-app Flutter module 默认关闭 `package_parameter_enabled`，对其他 Flutter package 默认开启。
 - **AI Guidance Header**: Generated Dart files now include an AI-facing header that points assistants to the project usage guide before changing asset access code.
   - **AI 指引注释**: 生成的 Dart 文件头部现在会附带面向 AI 的提示，要求修改资源访问代码前先阅读项目使用说明。
 - **Disable Cleanup**: Modules with `enable: false` now stop generating and remove the previously generated Dart file.
