@@ -2,6 +2,8 @@
 
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [Unreleased]
+- **AI Guidance Header**: Generated Dart files now include an AI-facing header that points assistants to the project usage guide before changing asset access code.
+  - **AI 指引注释**: 生成的 Dart 文件头部现在会附带面向 AI 的提示，要求修改资源访问代码前先阅读项目使用说明。
 - **Disable Cleanup**: Modules with `enable: false` now stop generating and remove the previously generated Dart file.
   - **禁用清理**: 配置为 `enable: false` 的模块现在会停止生成，并清理之前生成的 Dart 文件。
 - **Module Setup Entry**: Added a Project View right-click setup entry that appears only on the exact Flutter module root, improving monorepo usability.

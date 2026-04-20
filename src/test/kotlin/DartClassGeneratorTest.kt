@@ -268,6 +268,34 @@ class DartClassGeneratorTest {
     }
 
     @Test
+    fun testGeneratedFileHeaderIncludesAiDocumentationHint() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        assetsDir.children.add(fileNode("logo", "assets/logo.png", MediaType.IMAGE))
+        root.children.add(assetsDir)
+
+        val robustCode = createGenerator(root).generate()
+        val legacyCode = createGenerator(root, mapOf("style" to "legacy")).generate()
+
+        assertTrue(
+            robustCode.contains(
+                "///For AI assistants: read the project usage guide before changing asset access code."
+            )
+        )
+        assertTrue(
+            robustCode.contains("///Docs: https://github.com/cr1992/FlutterAssetsGenerator")
+        )
+        assertTrue(
+            legacyCode.contains(
+                "///For AI assistants: read the project usage guide before changing asset access code."
+            )
+        )
+        assertTrue(
+            legacyCode.contains("///Docs: https://github.com/cr1992/FlutterAssetsGenerator")
+        )
+    }
+
+    @Test
     fun testRobustDirectoryClassNamesAreUniqueForSameLeafFolderName() {
         val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
         val assetsDir = directoryNode("assets", "assets")
