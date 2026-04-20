@@ -72,6 +72,81 @@ class FileHelperConfigTest {
         assertEquals(Constants.LEAF_TYPE_STRING, FileHelperNew.getLeafType(stringConfig))
     }
 
+    @Test
+    fun testShouldIncludePubspecExcludesGeneratedFlutterMirrorDirectories() {
+        assertFalse(
+            FileHelperNew.shouldIncludePubspec(
+                "/repo/packages/demo/example/linux/flutter/ephemeral/.plugin_symlinks/path_provider/pubspec.yaml"
+            )
+        )
+        assertFalse(
+            FileHelperNew.shouldIncludePubspec(
+                "/repo/packages/demo/example/windows/flutter/ephemeral/pubspec.yaml"
+            )
+        )
+        assertFalse(
+            FileHelperNew.shouldIncludePubspec(
+                "/repo/.dart_tool/package_config/pubspec.yaml"
+            )
+        )
+    }
+
+    @Test
+    fun testShouldIncludePubspecKeepsRealMonorepoModuleRoots() {
+        assertTrue(
+            FileHelperNew.shouldIncludePubspec(
+                "/repo/packages/demo/pubspec.yaml"
+            )
+        )
+        assertTrue(
+            FileHelperNew.shouldIncludePubspec(
+                "/repo/apps/app_main/pubspec.yaml"
+            )
+        )
+    }
+
+    @Test
+    fun testIsFlutterPubspecMapAcceptsFlutterSection() {
+        assertTrue(
+            FileHelperNew.isFlutterPubspecMap(
+                mapOf(
+                    "name" to "demo",
+                    "flutter" to emptyMap<String, Any>()
+                )
+            )
+        )
+    }
+
+    @Test
+    fun testIsFlutterPubspecMapAcceptsFlutterSdkDependency() {
+        assertTrue(
+            FileHelperNew.isFlutterPubspecMap(
+                mapOf(
+                    "name" to "demo",
+                    "dependencies" to
+                            mapOf(
+                                "flutter" to mapOf("sdk" to "flutter")
+                            )
+                )
+            )
+        )
+    }
+
+    @Test
+    fun testIsFlutterPubspecMapRejectsPureDartPackage() {
+        assertFalse(
+            FileHelperNew.isFlutterPubspecMap(
+                mapOf(
+                    "name" to "demo",
+                    "dependencies" to
+                            mapOf(
+                                "collection" to "^1.0.0"
+                            )
+                )
+            )
+        )
+    }
+
     private fun createMockConfig(map: Map<String, Any>): ModulePubSpecConfig {
         val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
         Mockito.`when`(mockConfig.map).thenReturn(map)

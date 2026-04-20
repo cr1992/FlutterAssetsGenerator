@@ -3,6 +3,7 @@ package com.crzsc.plugin.utils
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
@@ -10,6 +11,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import io.flutter.pub.PubRoot
 import io.flutter.utils.FlutterModuleUtils
 import java.util.*
@@ -22,13 +24,46 @@ import org.yaml.snakeyaml.Yaml
 object FileHelperNew {
 
     private val LOG = Logger.getInstance(FileHelperNew::class.java)
+    private val excludedPubspecPathSegments =
+        setOf(
+            ".dart_tool",
+            ".pub-cache",
+            ".pub",
+            ".symlinks",
+            ".plugin_symlinks",
+            "build",
+            ".flutter-plugins-dependencies",
+            "ephemeral"
+        )
 
     /** 获取所有可用的Flutter Module的Asset配置 */
     @JvmStatic
     fun getAssets(project: Project): List<ModulePubSpecConfig> {
         val folders = mutableListOf<ModulePubSpecConfig>()
+        val pubspecFiles = findProjectPubspecFiles(project)
+        val filtered = pubspecFiles.filter { file -> isEligibleModulePubspecPath(file.path) }
+        LOG.info("Found ${pubspecFiles.size} pubspec.yaml, after filtering: ${filtered.size}")
+
+        for (pubspecFile in filtered) {
+            val module = pubspecFile.getModule(project)
+            if (module == null) {
+                LOG.info("  skipped (no module): ${pubspecFile.path}")
+                continue
+            }
+            val config = getPubSpecConfig(module, pubspecFile)
+            if (config == null) {
+                LOG.info("  skipped (not flutter or unreadable): ${pubspecFile.path}")
+                continue
+            }
+            LOG.info("  accepted: ${pubspecFile.path} [module=${module.name}]")
+            folders.add(config)
+        }
+        LOG.info("Resolved ${folders.size} Flutter module config(s)")
+        return folders
+    }
+
+    private fun findProjectPubspecFiles(project: Project): List<VirtualFile> {
         val pubspecFiles = mutableListOf<VirtualFile>()
-        // 使用 contentScope 而非 projectScope，避免扫描 External Libraries（如 .pub-cache）
         val scope = ProjectScope.getContentScope(project)
         FilenameIndex.processFilesByName(
             "pubspec.yaml",
@@ -40,35 +75,91 @@ object FileHelperNew {
             scope,
             project
         )
+        return pubspecFiles
+    }
 
-        // 过滤掉缓存/依赖目录中的 pubspec.yaml
-        val cacheSegments = setOf(".dart_tool", ".pub-cache", ".pub", ".symlinks", "build", ".flutter-plugins-dependencies")
-        val filtered = pubspecFiles.filter { file ->
-            val path = file.path
-            val excluded = cacheSegments.firstOrNull { segment -> path.contains("/$segment/") }
-            if (excluded != null) {
-                LOG.info("  excluded (matched /$excluded/): $path")
-            }
-            excluded == null
+    internal fun isEligibleModulePubspecPath(path: String): Boolean {
+        val excluded =
+            excludedPubspecPathSegments.firstOrNull { segment -> path.contains("/$segment/") }
+        if (excluded != null) {
+            LOG.info("  excluded (matched /$excluded/): $path")
+            return false
         }
-        LOG.info("Found ${pubspecFiles.size} pubspec.yaml, after filtering: ${filtered.size}")
+        return true
+    }
 
-        for (pubspecFile in filtered) {
-            val module = pubspecFile.getModule(project)
-            if (module == null) {
-                LOG.info("  skipped (no module): ${pubspecFile.path}")
-                continue
-            }
-            LOG.info("  accepted: ${pubspecFile.path} [module=${module.name}]")
-            getPubSpecConfig(module, pubspecFile)?.let { folders.add(it) }
+    internal fun shouldIncludePubspec(path: String): Boolean {
+        return isEligibleModulePubspecPath(path)
+    }
+
+    internal fun isFlutterPubspecMap(pubConfigMap: Map<*, *>): Boolean {
+        if (pubConfigMap.containsKey("flutter")) {
+            return true
         }
-        LOG.info("Resolved ${folders.size} Flutter module config(s)")
-        return folders
+        return hasSdkDependency(pubConfigMap, "dependencies", "flutter", "flutter") ||
+                hasSdkDependency(pubConfigMap, "dev_dependencies", "flutter_test", "flutter")
+    }
+
+    private fun hasSdkDependency(
+        pubConfigMap: Map<*, *>,
+        sectionName: String,
+        dependencyName: String,
+        sdkName: String
+    ): Boolean {
+        val dependencies = pubConfigMap[sectionName] as? Map<*, *> ?: return false
+        val dependency = dependencies[dependencyName] as? Map<*, *> ?: return false
+        return dependency["sdk"] == sdkName
+    }
+
+    internal fun readPubspecMap(pubspecFile: VirtualFile): Map<String, Any>? {
+        return try {
+            val document =
+                com.intellij
+                    .openapi
+                    .fileEditor
+                    .FileDocumentManager
+                    .getInstance()
+                    .getDocument(pubspecFile)
+            val content = document?.text ?: String(pubspecFile.contentsToByteArray())
+            Yaml().load(content) as? Map<String, Any>
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     @JvmStatic
     fun shouldActivateFor(project: Project): Boolean {
-        return FlutterModuleUtils.hasFlutterModule(project)
+        return CachedValuesManager.getManager(project).getCachedValue(project) {
+            CachedValueProvider.Result.create(
+                hasEligibleFlutterPubspec(project),
+                PsiModificationTracker.MODIFICATION_COUNT,
+                VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS
+            )
+        }
+    }
+
+    private fun hasEligibleFlutterPubspec(project: Project): Boolean {
+        val scope = ProjectScope.getContentScope(project)
+        var found = false
+        FilenameIndex.processFilesByName(
+            "pubspec.yaml",
+            false,
+            { file: PsiFileSystemItem ->
+                val virtualFile = file.virtualFile ?: return@processFilesByName true
+                if (!isEligibleModulePubspecPath(virtualFile.path)) {
+                    return@processFilesByName true
+                }
+                if (readPubspecMap(virtualFile)?.let(::isFlutterPubspecMap) == true) {
+                    found = true
+                    return@processFilesByName false
+                }
+                true
+            },
+            scope,
+            project
+        )
+        return found
     }
 
     fun tryGetAssetsList(map: Map<*, *>): MutableList<*>? {
@@ -93,6 +184,9 @@ object FileHelperNew {
         pubConfigMap: Map<String, Any>
     ): ModulePubSpecConfig? {
         try {
+            if (!isFlutterPubspecMap(pubConfigMap)) {
+                return null
+            }
             val moduleDir = pubspecFile.parent
             val pubRoot = PubRoot.forDirectory(moduleDir)
             if (moduleDir != null && pubRoot != null) {
@@ -130,17 +224,7 @@ object FileHelperNew {
             val moduleDir = pubspecFile.parent
             val pubRoot = PubRoot.forDirectory(moduleDir)
             if (moduleDir != null && pubRoot != null) {
-                // 优先从 Document 读取(内存中的最新内容)
-                val document =
-                    com.intellij
-                        .openapi
-                        .fileEditor
-                        .FileDocumentManager
-                        .getInstance()
-                        .getDocument(pubRoot.pubspec)
-                val content = document?.text ?: String(pubRoot.pubspec.contentsToByteArray())
-
-                val pubConfigMap = Yaml().load(content) as? Map<String, Any>
+                val pubConfigMap = readPubspecMap(pubRoot.pubspec)
                 if (pubConfigMap != null) {
                     return getPubSpecConfigFromMap(module, pubspecFile, pubConfigMap)
                 }

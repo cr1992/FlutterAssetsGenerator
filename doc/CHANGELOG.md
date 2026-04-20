@@ -4,6 +4,12 @@
 ## [Unreleased]
 - **Disable Cleanup**: Modules with `enable: false` now stop generating and remove the previously generated Dart file.
   - **禁用清理**: 配置为 `enable: false` 的模块现在会停止生成，并清理之前生成的 Dart 文件。
+- **Module Setup Entry**: Added a Project View right-click setup entry that appears only on the exact Flutter module root, improving monorepo usability.
+  - **模块配置入口**: 新增项目树右键 setup 入口，并且仅在精确命中 Flutter 模块根目录时显示，提升 monorepo 下的可用性。
+- **Pubspec Filtering**: Filter out generated Flutter mirror directories such as `ephemeral` and `.plugin_symlinks` during module discovery to reduce false positives and scan noise.
+  - **Pubspec 过滤**: 模块发现阶段过滤 `ephemeral`、`.plugin_symlinks` 等 Flutter 生成目录，减少误判和扫描噪音。
+- **Project Activation Rules**: Separate project-level activation from module-level eligibility so only real Flutter modules are configurable, while workspace roots or pure Dart packages are excluded.
+  - **项目激活规则**: 拆分项目级激活与模块级可配置判断，只将真实 Flutter 模块视为可配置目标，排除 workspace 根目录和纯 Dart package。
 
 ## [3.2.0]
 ### Added / 新增

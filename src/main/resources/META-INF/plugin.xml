@@ -61,5 +61,11 @@ A powerful Android Studio / IntelliJ plugin that automatically generates type-sa
                 icon="AllIcons.Actions.BuildLoadChanges">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="WeighingNewGroup"/>
         </action>
+
+        <action id="com.crzsc.plugin.actions.SetupCurrentModuleAction" class="com.crzsc.plugin.actions.SetupCurrentModuleAction"
+                text="Flutter: Setup Current Module" description="Add default flutter_assets_generator configuration to the selected Flutter module"
+                icon="AllIcons.Actions.BuildLoadChanges">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="com.crzsc.plugin.actions.GenerateDirAction"/>
+        </action>
     </actions>
 </idea-plugin>

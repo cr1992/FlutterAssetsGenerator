@@ -145,6 +145,19 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
 **核心职责**: 从 Module 中解析 `pubspec.yaml` 配置，支持内存读取。
 
 **关键方法**:
+*   **`shouldActivateFor(project: Project)`**:
+    *   **项目级激活**: 不再直接依赖 IDEA 的 Flutter module 识别结果，而是扫描当前工作区是否存在至少一个“合法 Flutter 模块”。
+    *   **合法模块定义**:
+        *   `pubspec.yaml` 位于当前工作区内容目录中。
+        *   路径不在 `.dart_tool`、`build`、`.symlinks`、`.plugin_symlinks`、`ephemeral` 等临时生成目录下。
+        *   `pubspec.yaml` 中包含 `flutter:` 节点，或声明了 Flutter SDK 依赖。
+    *   **缓存策略**: 使用 `CachedValuesManager` 按 Project 维度缓存结果，依赖 `PsiModificationTracker` 和 `VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS` 失效，避免在频繁 `update()` 中重复全量解析。
+*   **`getAssets(project: Project)`**:
+    *   **模块级过滤**: 仅返回真正可配置的 Flutter module 配置，不再把 workspace 根目录、纯 Dart package、临时生成目录当作模块候选。
+    *   **日志语义**:
+        *   `excluded (...)`: 路径命中过滤规则，直接排除。
+        *   `skipped (not flutter or unreadable)`: 存在 `pubspec.yaml`，但不是 Flutter module 或无法解析。
+        *   `accepted`: 确认为合法 Flutter module。
 *   **`getPubSpecConfig(module: Module)`**:
     *   **内存读取优先**:
         ```kotlin
@@ -247,6 +260,19 @@ private val NOTIFICATION_GROUP = NotificationGroup(
     true
 )
 ```
+
+#### 4.2.3 Monorepo 场景下的模块识别
+
+为支持大型 Monorepo，项目树右键 `Setup Current Module` 的显示逻辑被拆成两层：
+
+1.  **项目级**: 当前工作区中是否存在至少一个合法 Flutter module。
+2.  **目录级**: 当前右键目录是否精确等于某个 Flutter module 根目录。
+
+这样可以保证：
+
+*   在 `packages/foo`、`packages/foo/example` 这类真实模块根目录上显示入口。
+*   在 `lib/`、`assets/`、普通实验目录等子目录上隐藏入口。
+*   workspace 根目录即使存在 `pubspec.yaml`，只要不是实际 Flutter module，也不会被识别为可配置目标。
 
 #### 4.2.2 异步文件生成 (Asynchronous Generation)
 **类路径**: `src/main/java/com/crzsc/plugin/utils/FileGenerator.kt`

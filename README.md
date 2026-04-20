@@ -35,6 +35,14 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 For first-time users, use the one-click setup:
 
 - **Menu**: Click `Tools` -> `Flutter Assets Generator` -> `Setup Project Configuration`.
+- **Project View**: Right-click the root directory of a Flutter module, then click `Flutter: Setup Current Module` to configure only that module.
+
+Project activation and module setup follow these rules:
+
+- The plugin treats a project as available when it can find at least one valid Flutter module in the current workspace.
+- A valid Flutter module must be rooted at its own `pubspec.yaml` directory and contain Flutter configuration (`flutter:` or Flutter SDK dependency).
+- Temporary generated directories such as `.dart_tool`, `build`, `.symlinks`, `.plugin_symlinks`, and `ephemeral` are excluded from module detection.
+- The Project View setup entry is shown only when the selected directory exactly matches a Flutter module root. Child folders such as `lib/` or `assets/` do not show the entry.
 
 This will automatically add the default configuration to your `pubspec.yaml`:
 
@@ -60,7 +68,7 @@ flutter_assets_generator:
   # Enable/Disable this plugin for the current module. Default: true when the block exists
   enable: true
   # When set to false, generation stops and the previous generated Dart file is removed
-  # Sets the directory of generated files. Default: generated
+  # Sets the directory of generated files. Default: generated/
   output_dir: generated/
   # Sets the name for the generated file. Default: assets
   output_filename: assets
@@ -153,6 +161,14 @@ String path = Assets.images.logo.path;
 首次使用时，使用一键配置功能：
 
 -   **菜单**: 点击 `Tools` -> `Flutter Assets Generator` -> `Setup Project Configuration`。
+-   **项目树右键**: 在目标 Flutter 模块根目录上右键，点击 `Flutter: Setup Current Module`，只为当前模块补充默认配置。
+
+项目激活和模块配置遵循以下规则：
+
+-   只要当前工作区中存在至少一个合法 Flutter 模块，插件就会认为当前项目可用。
+-   合法 Flutter 模块必须以其自身的 `pubspec.yaml` 所在目录为根目录，并且配置中包含 Flutter 信息（`flutter:` 节点或 Flutter SDK 依赖）。
+-   `.dart_tool`、`build`、`.symlinks`、`.plugin_symlinks`、`ephemeral` 这类临时生成目录不会参与模块识别。
+-   项目树右键入口只会在“精确命中 Flutter 模块根目录”时显示，像 `lib/`、`assets/` 这样的子目录不会显示该入口。
 
 这将自动在您的 `pubspec.yaml` 中添加默认配置：
 
@@ -185,7 +201,7 @@ flutter_assets_generator:
   # 是否启用当前模块的插件能力。存在配置块时默认: true
   enable: true
   # 配置为 false 后，将停止生成并删除此前生成的 Dart 文件
-  # 生成文件的输出目录。默认: lib/generated
+  # 生成文件的输出目录。默认: generated/
   output_dir: generated/
   # 生成文件的文件名 (无后缀)。默认: assets
   output_filename: assets
