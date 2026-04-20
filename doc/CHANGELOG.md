@@ -2,6 +2,8 @@
 
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [Unreleased]
+- **Disable Cleanup**: Modules with `enable: false` now stop generating and remove the previously generated Dart file.
+  - **禁用清理**: 配置为 `enable: false` 的模块现在会停止生成，并清理之前生成的 Dart 文件。
 
 ## [3.2.0]
 ### Added / 新增

@@ -22,6 +22,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Widget Integration**: Generates `.svg()`, `.lottie()` and `.rive()` methods directly on asset objects.
 - **Auto Dependency Management**: Automatically checks and adds `flutter_svg`, `lottie` or `rive` dependencies.
 - **YAML as Source of Truth**: In 3.x, behavior is driven by `pubspec.yaml`. Modules without `flutter_assets_generator` config are not watched or generated automatically.
+- **Disable Cleanup**: Setting `enable: false` stops generation for that module and removes the previously generated Dart file.
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
@@ -58,6 +59,7 @@ flutter_assets_generator:
 flutter_assets_generator:
   # Enable/Disable this plugin for the current module. Default: true when the block exists
   enable: true
+  # When set to false, generation stops and the previous generated Dart file is removed
   # Sets the directory of generated files. Default: generated
   output_dir: generated/
   # Sets the name for the generated file. Default: assets
@@ -138,6 +140,7 @@ String path = Assets.images.logo.path;
 -   **Widget 集成**：直接在资源对象上生成 `.svg()`, `.lottie()` 和 `.rive()` 方法。
 -   **自动依赖管理**：如果检测到相关资源但缺少依赖，插件会自动向 `pubspec.yaml` 添加 `flutter_svg`, `lottie` 或 `rive`。
 -   **YAML 单一配置源**：3.x 以后所有行为都以 `pubspec.yaml` 为准。未配置 `flutter_assets_generator` 的模块不会自动监听或生成。
+-   **禁用即清理**：将 `enable: false` 后，插件会停止该模块的生成，并删除之前生成的 Dart 文件。
 -   **智能自动更新**：
     -   **资源文件**: 监听图片文件增删，自动重新生成。
     -   **配置文件**: 监听 `pubspec.yaml` 的**保存**动作 (Cmd+S)。智能 Diff 算法确保只在配置真正变化时构建。
@@ -181,6 +184,7 @@ flutter_assets_generator:
 flutter_assets_generator:
   # 是否启用当前模块的插件能力。存在配置块时默认: true
   enable: true
+  # 配置为 false 后，将停止生成并删除此前生成的 Dart 文件
   # 生成文件的输出目录。默认: lib/generated
   output_dir: generated/
   # 生成文件的文件名 (无后缀)。默认: assets

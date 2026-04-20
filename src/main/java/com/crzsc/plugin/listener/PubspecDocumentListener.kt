@@ -73,6 +73,12 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
                     PubspecConfigCache.put(project, modulePath, newConfig)
 
                     if (!shouldTriggerGeneration(newConfig, hasChanged = true)) {
+                        if (newConfig.hasPluginConfig && !newConfig.pluginEnabled) {
+                            LOG.info(
+                                "$TAG module=${config.module.name} config-disabled cleanup-generated-file"
+                            )
+                            fileGenerator.deleteGeneratedFile(config)
+                        }
                         LOG.info(
                             "$TAG module=${config.module.name} skip-generation reason=config-disabled-or-missing"
                         )

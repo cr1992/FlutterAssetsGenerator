@@ -35,6 +35,7 @@ class FileGenerator(private val project: Project) {
     /** 为所有模块重新生成 */
     fun generateAll() {
         val allConfigs = FileHelperNew.getAssets(project)
+        cleanupDisabledConfigs(allConfigs)
         val assets = filterEnabledConfigs(allConfigs)
         LOG.info(
             "[FlutterAssetsGenerator #${project.name}] ${assets.size} module(s) available for generation out of ${allConfigs.size} discovered module(s)"
@@ -55,6 +56,7 @@ class FileGenerator(private val project: Project) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Plugin config missing or disabled, skipping generation"
             )
+            deleteGeneratedFile(config)
             return
         }
 
@@ -88,6 +90,10 @@ class FileGenerator(private val project: Project) {
                     FileHelperNew.isPluginEnabled(it) &&
                     it.assetVFiles.isNotEmpty()
         }
+    }
+
+    internal fun shouldDeleteGeneratedFile(config: ModulePubSpecConfig): Boolean {
+        return FileHelperNew.hasPluginConfig(config) && !FileHelperNew.isPluginEnabled(config)
     }
 
     internal fun shouldShowSetupPrompt(configs: List<ModulePubSpecConfig>): Boolean {
@@ -125,6 +131,27 @@ class FileGenerator(private val project: Project) {
                 "[FlutterAssetsGenerator #${project.name}/${config.module.name}] generation candidate check: pubspec=${config.pubRoot.pubspec.path}, hasPluginConfig=$hasPluginConfig, enabled=$isEnabled, assetCount=$assetCount, configuredAssets=$configuredAssets, reason=$reason"
             )
         }
+    }
+
+    private fun cleanupDisabledConfigs(configs: List<ModulePubSpecConfig>) {
+        configs.filter(::shouldDeleteGeneratedFile).forEach(::deleteGeneratedFile)
+    }
+
+    internal fun deleteGeneratedFile(config: ModulePubSpecConfig): Boolean {
+        val generatedFile = FileHelperNew.findGeneratedFile(config)
+        if (generatedFile == null || !generatedFile.exists()) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] No generated file to delete"
+            )
+            return false
+        }
+
+        generatedFile.delete(this)
+        LOG.info(
+            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Deleted generated file: ${generatedFile.path}"
+        )
+        showNotify("${config.module.name} : generated assets removed because enable=false")
+        return true
     }
 
     private data class GenerationData(

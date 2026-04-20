@@ -248,26 +248,64 @@ object FileHelperNew {
 
     /** 获取generated自动生成目录 从yaml中读取 */
     private fun getGeneratedFilePath(config: ModulePubSpecConfig): VirtualFile {
-        return config.pubRoot.lib?.let { lib ->
-            // 读取配置的输出目录
-            val filePath: String =
-                readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
-                    ?: Constants.DEFAULT_OUTPUT_DIR
+        return resolveGeneratedDirectory(
+            config.pubRoot.lib,
+            getOutputDir(config),
+            createIfMissing = true
+        )!!
+    }
 
-            println("getGeneratedFilePath $filePath")
+    fun getOutputDir(config: ModulePubSpecConfig): String {
+        return readSetting(config, Constants.KEY_OUTPUT_DIR) as String?
+            ?: Constants.DEFAULT_OUTPUT_DIR
+    }
 
-            if (!filePath.contains(File.separator)) {
-                return@let lib.findOrCreateChildDir(lib, filePath)
+    fun findGeneratedFile(config: ModulePubSpecConfig): VirtualFile? {
+        return findGeneratedFile(
+            config.pubRoot,
+            getOutputDir(config),
+            getGeneratedFileName(config)
+        )
+    }
+
+    fun findGeneratedFile(
+        pubRoot: PubRoot,
+        outputDir: String,
+        outputFilename: String
+    ): VirtualFile? {
+        val generatedDir =
+            resolveGeneratedDirectory(pubRoot.lib, outputDir, createIfMissing = false)
+                ?: return null
+        return generatedDir.findChild("$outputFilename.dart")
+    }
+
+    private fun resolveGeneratedDirectory(
+        lib: VirtualFile?,
+        outputDir: String,
+        createIfMissing: Boolean
+    ): VirtualFile? {
+        val root = lib ?: return null
+        if (!outputDir.contains(File.separator)) {
+            return if (createIfMissing) {
+                root.findOrCreateChildDir(root, outputDir)
             } else {
-                var file = lib
-                filePath.split(File.separator).forEach { dir ->
-                    if (dir.isNotEmpty()) {
-                        file = file.findOrCreateChildDir(file, dir)
-                    }
-                }
-                return@let file
+                root.findChild(outputDir)
             }
-        }!!
+        }
+
+        var current: VirtualFile = root
+        for (dir in outputDir.split(File.separator)) {
+            if (dir.isEmpty()) {
+                continue
+            }
+            current =
+                if (createIfMissing) {
+                    current.findOrCreateChildDir(current, dir)
+                } else {
+                    current.findChild(dir) ?: return null
+                }
+        }
+        return current
     }
 
     private fun VirtualFile.findOrCreateChildDir(requestor: Any, name: String): VirtualFile {

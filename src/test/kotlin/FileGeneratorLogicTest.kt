@@ -39,6 +39,18 @@ class FileGeneratorLogicTest {
     }
 
     @Test
+    fun testShouldDeleteGeneratedFileOnlyWhenPluginExplicitlyDisabled() {
+        val generator = FileGenerator(mockProject())
+        val disabled = mockConfig(hasPluginConfig = true, enable = false, withAssets = true)
+        val enabled = mockConfig(hasPluginConfig = true, enable = true, withAssets = true)
+        val missingConfig = mockConfig(hasPluginConfig = false, enable = false, withAssets = true)
+
+        assertTrue(generator.shouldDeleteGeneratedFile(disabled))
+        assertFalse(generator.shouldDeleteGeneratedFile(enabled))
+        assertFalse(generator.shouldDeleteGeneratedFile(missingConfig))
+    }
+
+    @Test
     fun testLeafTypeStringDisablesTypedDependencyAutoAdd() {
         val generator = FileGenerator(mockProject())
         val classLeaf =
