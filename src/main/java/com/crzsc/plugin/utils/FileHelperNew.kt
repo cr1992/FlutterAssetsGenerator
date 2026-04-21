@@ -290,12 +290,26 @@ object FileHelperNew {
         }
     }
 
-    /** 读取 robust 风格叶子类型配置 */
+    /** 读取引用类型配置，未显式配置时根据 style 决定默认值：robust 默认 class，legacy 默认 string */
     fun getLeafType(config: ModulePubSpecConfig): String {
-        return when (readSetting(config, Constants.KEY_LEAF_TYPE) as? String) {
-            Constants.LEAF_TYPE_STRING -> Constants.LEAF_TYPE_STRING
-            else -> Constants.DEFAULT_LEAF_TYPE
+        val explicit = readSetting(config, Constants.KEY_LEAF_TYPE) as? String
+        if (explicit != null) {
+            return when (explicit) {
+                Constants.LEAF_TYPE_STRING -> Constants.LEAF_TYPE_STRING
+                Constants.LEAF_TYPE_CLASS -> Constants.LEAF_TYPE_CLASS
+                else -> Constants.DEFAULT_LEAF_TYPE
+            }
         }
+        return if (getGenerationStyle(config) == "legacy") {
+            Constants.LEAF_TYPE_STRING
+        } else {
+            Constants.DEFAULT_LEAF_TYPE
+        }
+    }
+
+    /** 检查用户是否显式配置了 leaf_type */
+    fun isLeafTypeExplicitlySet(config: ModulePubSpecConfig): Boolean {
+        return readSetting(config, Constants.KEY_LEAF_TYPE) != null
     }
 
     /** 读取生成的类名配置 */

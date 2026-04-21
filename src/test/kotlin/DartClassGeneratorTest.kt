@@ -462,6 +462,66 @@ class DartClassGeneratorTest {
         assertFalse(generatedCode.contains("class \$AssetsGenAssets"))
     }
 
+    @Test
+    fun testLegacyStyleWithLeafTypeClassGeneratesTypedWrappers() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        assetsDir.children.add(fileNode("logo", "assets/logo.png", MediaType.IMAGE))
+        assetsDir.children.add(fileNode("icon", "assets/icon.svg", MediaType.SVG))
+        assetsDir.children.add(fileNode("anim", "assets/anim.lottie", MediaType.LOTTIE))
+        assetsDir.children.add(fileNode("motion", "assets/motion.riv", MediaType.RIVE))
+        assetsDir.children.add(fileNode("readme", "assets/readme.txt", MediaType.UNKNOWN))
+        root.children.add(assetsDir)
+
+        val generatedCode =
+            createGenerator(
+                root,
+                mapOf(
+                    "style" to "legacy",
+                    Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_CLASS
+                )
+            ).generate()
+
+        assertTrue(
+            "Should contain AssetGenImage for png",
+            generatedCode.contains(
+                "static const AssetGenImage logo = AssetGenImage('assets/logo.png');"
+            )
+        )
+        assertTrue(
+            "Should contain SvgGenImage for svg",
+            generatedCode.contains(
+                "static const SvgGenImage icon = SvgGenImage('assets/icon.svg');"
+            )
+        )
+        assertTrue(
+            "Should contain LottieGenImage for lottie",
+            generatedCode.contains(
+                "static const LottieGenImage anim = LottieGenImage('assets/anim.lottie');"
+            )
+        )
+        assertTrue(
+            "Should contain RiveGenImage for rive",
+            generatedCode.contains(
+                "static const RiveGenImage motion = RiveGenImage('assets/motion.riv');"
+            )
+        )
+        assertTrue(
+            "Should contain String for unknown type",
+            generatedCode.contains(
+                "static const String readme = 'assets/readme.txt';"
+            )
+        )
+        assertTrue(
+            "Should contain helper class AssetGenImage",
+            generatedCode.contains("class AssetGenImage {")
+        )
+        assertFalse(
+            "Should not contain directory classes",
+            generatedCode.contains("class \$AssetsGen")
+        )
+    }
+
     private fun createMockConfig(pluginConfig: Map<String, Any> = emptyMap()): ModulePubSpecConfig {
         val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
         Mockito.`when`(mockConfig.map)

@@ -28,8 +28,7 @@ class DartClassGenerator(
     private val generatedDirectoryClassNames = mutableMapOf<String, String>()
     private val usedDirectoryClassNames = mutableSetOf<String>()
     private val isStringLeafMode =
-        FileHelperNew.getGenerationStyle(config) == "robust" &&
-                FileHelperNew.getLeafType(config) == Constants.LEAF_TYPE_STRING
+        FileHelperNew.getLeafType(config) == Constants.LEAF_TYPE_STRING
 
     fun generate(): String {
         val style = FileHelperNew.getGenerationStyle(config)
@@ -130,6 +129,26 @@ class DartClassGenerator(
             "[FlutterAssetsGenerator #DartClassGenerator] Starting legacy code generation (camel_case)..."
         )
         appendGeneratedFileHeader()
+
+        val isPackageParameterEnabled = FileHelperNew.isPackageParameterEnabled(config)
+        val packageName = if (isPackageParameterEnabled) config.map["name"] as? String else null
+
+        if (!isStringLeafMode) {
+            buffer.append("import 'package:flutter/widgets.dart';\n")
+            if (hasSvgDep) {
+                buffer.append("import 'package:flutter_svg/flutter_svg.dart';\n")
+            }
+            if (hasLottieDep) {
+                buffer.append("import 'package:lottie/lottie.dart';\n")
+                buffer.append("import 'package:lottie/src/lottie_builder.dart';\n")
+                buffer.append("import 'package:lottie/src/composition.dart';\n")
+            }
+            if (hasRiveDep) {
+                buffer.append("import 'package:rive/rive.dart' hide Image;\n")
+            }
+            buffer.append("\n")
+        }
+
         val className = FileHelperNew.getGeneratedClassName(config)
 
         buffer.append("class $className {\n")
@@ -172,17 +191,36 @@ class DartClassGenerator(
             nameMap[finalName] = 1
 
             var fullPath = "$prefix${file.path}"
-            val isPackageParameterEnabled = FileHelperNew.isPackageParameterEnabled(config)
             if (isPackageParameterEnabled) {
-                val packageName = config.map["name"] as? String
                 if (packageName != null) {
                     fullPath = "packages/$packageName/$fullPath"
                 }
             }
-            buffer.append("  static const String $finalName = '$fullPath';\n")
+            if (!isStringLeafMode) {
+                when (file.type) {
+                    MediaType.IMAGE ->
+                        buffer.append("  static const AssetGenImage $finalName = AssetGenImage('$fullPath');\n")
+                    MediaType.SVG ->
+                        buffer.append("  static const SvgGenImage $finalName = SvgGenImage('$fullPath');\n")
+                    MediaType.LOTTIE ->
+                        buffer.append("  static const LottieGenImage $finalName = LottieGenImage('$fullPath');\n")
+                    MediaType.RIVE ->
+                        buffer.append("  static const RiveGenImage $finalName = RiveGenImage('$fullPath');\n")
+                    else ->
+                        buffer.append("  static const String $finalName = '$fullPath';\n")
+                }
+            } else {
+                buffer.append("  static const String $finalName = '$fullPath';\n")
+            }
         }
 
         buffer.append("}\n")
+
+        if (!isStringLeafMode) {
+            buffer.append("\n")
+            generateHelperClasses(packageName)
+        }
+
         return buffer.toString()
     }
 

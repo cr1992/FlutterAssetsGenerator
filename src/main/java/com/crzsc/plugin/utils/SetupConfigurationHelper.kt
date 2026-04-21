@@ -174,7 +174,7 @@ object SetupConfigurationHelper {
               auto_add_dependencies: true
               # Options: robust (default), legacy (old style)
               style: robust
-              # For robust style: class (default) or string
+              # Leaf type: class (typed wrappers, default for robust) or string (raw path, default for legacy)
               leaf_type: class
               # Options: camel (default), snake
               name_style: camel

@@ -1,30 +1,30 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 [//]: # (# FlutterAssetsGenerator Changelog)
-## [Unreleased]
-- **Generation EDT Reduction**: Batch generation now reuses a single background flow, resolves Flutter version once per run, skips generated-file reformatting, and summarizes notifications at the end.
-  - **生成 EDT 降载**: 批量生成现在复用单条后台流程、每轮只解析一次 Flutter 版本、跳过生成文件格式化，并在结束时汇总通知。
-- **Monorepo Performance**: In the 2026-04-21 monorepo reproduction, batch generation dropped from `23.7s` to `1.512s` (`15.67x` faster, `93.6%` lower total time), and average per-module write time dropped from `1339.88ms` to `7.62ms` (`175.72x` faster, `99.4%` lower).
-  - **Monorepo 性能数据**: 在 2026-04-21 的 monorepo 复现日志中，批量生成总耗时从 `23.7s` 降到 `1.512s`（`15.67x` 提升，累计耗时下降 `93.6%`），单模块平均写入耗时从 `1339.88ms` 降到 `7.62ms`（`175.72x` 提升，写入耗时下降 `99.4%`）。
-- **Module-Type Package Defaults**: Setup now defaults `package_parameter_enabled` to `false` for Flutter apps and add-to-app Flutter modules, and to `true` for other Flutter packages.
-  - **模块类型默认值**: 一键配置现在会对 Flutter app 和 add-to-app Flutter module 默认关闭 `package_parameter_enabled`，对其他 Flutter package 默认开启。
-- **AI Guidance Header**: Generated Dart files now include an AI-facing header that points assistants to the project usage guide before changing asset access code.
-  - **AI 指引注释**: 生成的 Dart 文件头部现在会附带面向 AI 的提示，要求修改资源访问代码前先阅读项目使用说明。
-- **Disable Cleanup**: Modules with `enable: false` now stop generating and remove the previously generated Dart file.
-  - **禁用清理**: 配置为 `enable: false` 的模块现在会停止生成，并清理之前生成的 Dart 文件。
-- **Module Setup Entry**: Added a Project View right-click setup entry that appears only on the exact Flutter module root, improving monorepo usability.
-  - **模块配置入口**: 新增项目树右键 setup 入口，并且仅在精确命中 Flutter 模块根目录时显示，提升 monorepo 下的可用性。
-- **Pubspec Filtering**: Filter out generated Flutter mirror directories such as `ephemeral` and `.plugin_symlinks` during module discovery to reduce false positives and scan noise.
-  - **Pubspec 过滤**: 模块发现阶段过滤 `ephemeral`、`.plugin_symlinks` 等 Flutter 生成目录，减少误判和扫描噪音。
-- **Project Activation Rules**: Separate project-level activation from module-level eligibility so only real Flutter modules are configurable, while workspace roots or pure Dart packages are excluded.
-  - **项目激活规则**: 拆分项目级激活与模块级可配置判断，只将真实 Flutter 模块视为可配置目标，排除 workspace 根目录和纯 Dart package。
+## [3.3.0]
+
+### Added / 新增
+- **`leaf_type` supports both styles**: `leaf_type` is now independent of `style`. Legacy mode can use `leaf_type: class` to get typed wrappers (`AssetGenImage`, `SvgGenImage`, etc.) with flat access paths. Default: `class` for robust, `string` for legacy.
+  - **`leaf_type` 支持所有风格**: `leaf_type` 不再绑定 `style`。Legacy 模式可通过 `leaf_type: class` 获得类型安全的包装类，同时保持扁平访问路径。默认值：robust 为 `class`，legacy 为 `string`。
+- **Right-click module setup**: Right-click a Flutter module root in Project View to set up that module individually.
+  - **右键模块配置**: 在项目树中右键 Flutter 模块根目录即可单独配置该模块。
+- **`enable: false` cleanup**: Disabling a module now removes its generated Dart file.
+  - **禁用即清理**: 设置 `enable: false` 后自动删除已生成的 Dart 文件。
+
+### Improved / 优化
+- **Monorepo performance**: Batch generation up to ~15x faster (async flow, single Flutter version resolve, skip reformat).
+  - **Monorepo 性能**: 批量生成提速约 15 倍（异步流程、单次 Flutter 版本解析、跳过格式化）。
+- **Smarter module discovery**: Filters out `ephemeral`, `.plugin_symlinks` etc.; only real Flutter modules are configurable.
+  - **更精准的模块发现**: 过滤 `ephemeral`、`.plugin_symlinks` 等目录，仅识别真实 Flutter 模块。
+- **Setup defaults**: `package_parameter_enabled` now defaults based on module type (app → `false`, package → `true`).
+  - **配置默认值**: `package_parameter_enabled` 根据模块类型自动设定（app → `false`，package → `true`）。
 
 ## [3.2.0]
 ### Added / 新增
 - **Enable Config**: Added `enable` to explicitly control whether a module participates in watching and generation.
   - **启用开关**: 新增 `enable` 配置，用于显式控制模块是否参与监听和生成。
-- **Leaf Type Config**: Added `leaf_type` for `robust` style so hierarchical APIs can return either typed wrappers or raw `String` paths.
-  - **叶子类型配置**: 为 `robust` 风格新增 `leaf_type` 配置，支持在保留分层 API 的同时选择返回包装类型或原始 `String` 路径。
+- **Leaf Type Config**: Added `leaf_type` option independent of generation style. Controls whether assets use typed wrappers (`class`) or raw `String` paths (`string`).
+  - **引用类型配置**: 新增 `leaf_type` 配置，独立于生成风格，控制资源引用使用包装类型（`class`）还是原始 `String` 路径（`string`）。
 
 ### Changed / 变更
 - **YAML Source of Truth**: 3.x now treats `pubspec.yaml` as the source of truth. Modules without a `flutter_assets_generator` block are no longer watched or generated automatically.

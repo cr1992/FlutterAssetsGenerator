@@ -57,7 +57,7 @@ flutter_assets_generator:
   auto_detection: true
   auto_add_dependencies: true
   style: robust # Options: robust (default), legacy (legacy)
-  leaf_type: class # Options: class (default), string
+  leaf_type: class # Options: class (default for robust), string (default for legacy)
   name_style: camel # Options: camel (default), snake
   package_parameter_enabled: false # Flutter packages default to true
   path_ignore: []
@@ -84,7 +84,7 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # Generation style: robust (Hierarchical) or legacy (Flat legacy). Default: robust
   style: robust
-  # For robust style: leaf type class (typed wrappers) or string (raw asset path). Default: class
+  # Leaf type: class (typed wrappers) or string (raw asset path). Default: class for robust, string for legacy
   leaf_type: class
   # Name style for generated identifiers. Default: camel
   name_style: camel
@@ -94,7 +94,17 @@ flutter_assets_generator:
   path_ignore: ["assets/fonts"]
 ```
 
-When `style: robust` and `leaf_type: string`, the generator keeps the hierarchical API such as `Assets.icons.user`, but each leaf returns a raw `String` path. In this mode the plugin will not auto-add `flutter_svg`, `lottie`, or `rive`.
+When `leaf_type: string`, asset references return raw `String` paths (e.g., `Assets.icons.user` returns a string). In this mode the plugin will not auto-add `flutter_svg`, `lottie`, or `rive`.
+
+When `style: legacy` and `leaf_type: class`, the generator keeps flat access paths but wraps known asset types with typed helpers:
+
+```dart
+// legacy + leaf_type: class
+static const AssetGenImage imagesLogo = AssetGenImage('assets/images/logo.png');
+static const SvgGenImage iconsHome = SvgGenImage('assets/icons/home.svg');
+// Unknown types (e.g. mp4, json) still fall back to String
+static const String videosIntro = 'assets/videos/intro.mp4';
+```
 
 Modules without a `flutter_assets_generator` block are not monitored automatically. If you run `Generate Assets` before initialization, the plugin will ask you to run `Setup Project Configuration` first.
 
@@ -188,7 +198,7 @@ flutter_assets_generator:
   # robust: 分层级风格 (Assets.images.logo)
   # legacy: 扁平风格 (Assets.imagesLogo)
   style: robust
-  # robust 风格下叶子类型: class(默认) 或 string
+  # 引用类型: class(默认 robust) 或 string(默认 legacy)
   leaf_type: class
   # 命名风格: camel (默认) 或 snake
   name_style: camel
@@ -219,7 +229,7 @@ flutter_assets_generator:
   auto_add_dependencies: true
   # 生成风格: robust (分层级) 或 legacy (旧版扁平)。默认: robust
   style: robust
-  # robust 风格下叶子类型: class(包装类) 或 string(原始路径)。默认: class
+  # 引用类型: class(包装类) 或 string(原始路径)。robust 默认 class，legacy 默认 string
   leaf_type: class
   # 生成标识符的命名风格。默认: camel
   name_style: camel
@@ -229,7 +239,17 @@ flutter_assets_generator:
   path_ignore: ["assets/fonts"]
 ```
 
-当 `style: robust` 且 `leaf_type: string` 时，生成器会保留 `Assets.icons.user` 这类分层 API，但叶子节点直接返回原始 `String` 路径。该模式下插件不会自动添加 `flutter_svg`、`lottie` 或 `rive` 依赖。
+当 `leaf_type: string` 时，资源引用直接返回原始 `String` 路径（如 `Assets.icons.user` 返回字符串）。该模式下插件不会自动添加 `flutter_svg`、`lottie` 或 `rive` 依赖。
+
+当 `style: legacy` 且 `leaf_type: class` 时，生成器保持扁平访问路径，同时为已知资源类型生成类型安全的包装类：
+
+```dart
+// legacy + leaf_type: class
+static const AssetGenImage imagesLogo = AssetGenImage('assets/images/logo.png');
+static const SvgGenImage iconsHome = SvgGenImage('assets/icons/home.svg');
+// 未识别类型 (如 mp4, json) 仍然退化为 String
+static const String videosIntro = 'assets/videos/intro.mp4';
+```
 
 如果模块没有 `flutter_assets_generator` 配置块，插件不会自动监听。此时手动执行 `Generate Assets` 会提示先运行 `Setup Project Configuration` 完成初始化。
 

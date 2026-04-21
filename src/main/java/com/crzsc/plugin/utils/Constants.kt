@@ -28,7 +28,7 @@ object Constants {
     /** 命名风格 */
     const val KEY_NAME_STYLE = "name_style"
 
-    /** robust 风格叶子类型 */
+    /** 引用类型：class（包装类）或 string（原始路径） */
     const val KEY_LEAF_TYPE = "leaf_type"
 
     /** 输出的文件名 */

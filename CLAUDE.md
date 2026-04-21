@@ -61,7 +61,13 @@ pubspec.yaml discovery (FileHelperNew.getAssets)
 
 Two styles controlled by `style` key in pubspec config:
 - `robust` (default) — hierarchical nested classes with type-safe wrappers (`AssetGenImage`, `SvgGenImage`, etc.)
-- `legacy` — flat `static const String` fields, optional parent-directory name prefixing
+- `legacy` — flat `static const` fields, optional parent-directory name prefixing
+
+Both styles support `leaf_type` configuration:
+- `leaf_type: class` — generates type-safe wrappers (`AssetGenImage`, `SvgGenImage`, etc.). Default for robust
+- `leaf_type: string` — generates plain `String` constants. Default for legacy
+
+Legacy deduplication: `named_with_parent: true` (default) prefixes field names with parent directory, falls back to grandparent on collision, then numeric suffix
 
 ## Plugin Config Block
 
