@@ -91,10 +91,19 @@ data class PubspecConfig(
                 Constants.NAME_STYLE_SNAKE -> Constants.NAME_STYLE_SNAKE
                 else -> Constants.DEFAULT_NAME_STYLE
             }
-            val leafType = when (pluginConfig?.get(Constants.KEY_LEAF_TYPE) as? String) {
-                Constants.LEAF_TYPE_STRING -> Constants.LEAF_TYPE_STRING
-                else -> Constants.DEFAULT_LEAF_TYPE
-            }
+            val explicitLeafType = pluginConfig?.get(Constants.KEY_LEAF_TYPE) as? String
+            val leafType =
+                when (explicitLeafType) {
+                    Constants.LEAF_TYPE_STRING -> Constants.LEAF_TYPE_STRING
+                    Constants.LEAF_TYPE_CLASS -> Constants.LEAF_TYPE_CLASS
+                    null ->
+                        if (generationStyle == "legacy") {
+                            Constants.LEAF_TYPE_STRING
+                        } else {
+                            Constants.DEFAULT_LEAF_TYPE
+                        }
+                    else -> Constants.DEFAULT_LEAF_TYPE
+                }
             val packageParameterEnabled =
                 pluginConfig?.get(Constants.KEY_PACKAGE_PARAMETER_ENABLED) as? Boolean ?: false
 

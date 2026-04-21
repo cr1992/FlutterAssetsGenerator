@@ -87,6 +87,22 @@ class PubspecConfigTest {
     }
 
     @Test
+    fun testFromMapLegacyDefaultsLeafTypeToString() {
+        val map =
+            mapOf(
+                "flutter_assets_generator" to
+                        mapOf(
+                            "style" to "legacy"
+                        )
+            )
+
+        val config = PubspecConfig.fromMap(map)
+
+        assertEquals("legacy", config.generationStyle)
+        assertEquals("string", config.leafType)
+    }
+
+    @Test
     fun testHasChangedDepsIgnored() {
         // Mock Project
         val project = Mockito.mock(Project::class.java)
@@ -173,6 +189,29 @@ class PubspecConfigTest {
                 project,
                 modulePath,
                 baseConfig.copy(leafType = "string")
+            )
+        )
+    }
+
+    @Test
+    fun testHasChangedLegacyLeafTypeClassExplicitlySetTriggersRegeneration() {
+        val project = Mockito.mock(Project::class.java)
+        Mockito.`when`(project.locationHash).thenReturn("test_project_hash_legacy")
+        Mockito.`when`(project.name).thenReturn("TestProject")
+
+        val modulePath = "/path/to/legacy-module"
+        val implicitLegacyLeafType =
+            createBaseConfig().copy(
+                generationStyle = "legacy",
+                leafType = "string"
+            )
+        PubspecConfigCache.put(project, modulePath, implicitLegacyLeafType)
+
+        assertTrue(
+            PubspecConfigCache.hasChanged(
+                project,
+                modulePath,
+                implicitLegacyLeafType.copy(leafType = "class")
             )
         )
     }

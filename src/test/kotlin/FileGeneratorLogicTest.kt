@@ -81,6 +81,39 @@ class FileGeneratorLogicTest {
         assertFalse(generator.shouldAutoAddTypedDependencies(stringLeaf))
     }
 
+    @Test
+    fun testLegacyDefaultLeafTypeAlsoDisablesTypedDependencyAutoAdd() {
+        val generator = FileGenerator(mockProject())
+        val legacyImplicitStringLeaf =
+            mockConfig(
+                hasPluginConfig = true,
+                enable = true,
+                withAssets = true,
+                pluginConfig =
+                    mapOf(
+                        Constants.KEY_AUTO_DETECTION to true,
+                        Constants.KEY_AUTO_ADD_DEPENDENCIES to true,
+                        "style" to "legacy"
+                    )
+            )
+        val legacyExplicitClassLeaf =
+            mockConfig(
+                hasPluginConfig = true,
+                enable = true,
+                withAssets = true,
+                pluginConfig =
+                    mapOf(
+                        Constants.KEY_AUTO_DETECTION to true,
+                        Constants.KEY_AUTO_ADD_DEPENDENCIES to true,
+                        "style" to "legacy",
+                        Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_CLASS
+                    )
+            )
+
+        assertFalse(generator.shouldAutoAddTypedDependencies(legacyImplicitStringLeaf))
+        assertTrue(generator.shouldAutoAddTypedDependencies(legacyExplicitClassLeaf))
+    }
+
     private fun mockProject(): Project {
         val project = Mockito.mock(Project::class.java)
         Mockito.`when`(project.name).thenReturn("TestProject")

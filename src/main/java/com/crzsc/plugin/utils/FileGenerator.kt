@@ -147,9 +147,7 @@ class FileGenerator(private val project: Project) {
     }
 
     internal fun shouldAutoAddTypedDependencies(config: ModulePubSpecConfig): Boolean {
-        val isStringLeafMode =
-            FileHelperNew.getGenerationStyle(config) == "robust" &&
-                    FileHelperNew.getLeafType(config) == Constants.LEAF_TYPE_STRING
+        val isStringLeafMode = FileHelperNew.getLeafType(config) == Constants.LEAF_TYPE_STRING
         return !isStringLeafMode &&
                 FileHelperNew.isAutoDetectionEnable(config) &&
                 FileHelperNew.isAutoAddDependenciesEnable(config)

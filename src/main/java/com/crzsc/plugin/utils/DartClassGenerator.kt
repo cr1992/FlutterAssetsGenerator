@@ -1095,7 +1095,7 @@ $packageDecl
     }
 
     private fun buildLeafPath(fullPath: String): String {
-        if (!isStringLeafMode || !FileHelperNew.isPackageParameterEnabled(config)) {
+        if (!FileHelperNew.isPackageParameterEnabled(config)) {
             return fullPath
         }
 

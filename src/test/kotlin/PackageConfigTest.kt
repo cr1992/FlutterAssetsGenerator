@@ -191,6 +191,9 @@ class PackageConfigTest {
         assetsDir.children.add(
             AssetNode("logo", "assets/logo.png", MediaType.IMAGE, null)
         )
+        assetsDir.children.add(
+            AssetNode("intro", "assets/intro.mp4", MediaType.UNKNOWN, null)
+        )
 
         val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
         Mockito.`when`(mockConfig.map).thenReturn(
@@ -221,6 +224,10 @@ class PackageConfigTest {
         assertTrue(
             "Typed leaf constructor should keep relative path",
             code.contains("static const AssetGenImage logo = AssetGenImage('assets/logo.png');")
+        )
+        assertTrue(
+            "Non-typed leaf should still include package prefix",
+            code.contains("static const String intro = 'packages/my_awesome_package/assets/intro.mp4';")
         )
         assertFalse(
             "Typed leaf constructor should not embed package prefix",
