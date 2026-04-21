@@ -184,6 +184,57 @@ class PackageConfigTest {
     }
 
     @Test
+    fun testLegacyStyleLeafTypeClassWithPackageParameterKeepsRelativeConstructorPath() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)
+        root.children.add(assetsDir)
+        assetsDir.children.add(
+            AssetNode("logo", "assets/logo.png", MediaType.IMAGE, null)
+        )
+
+        val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
+        Mockito.`when`(mockConfig.map).thenReturn(
+            mapOf(
+                "name" to "my_awesome_package",
+                "flutter_assets_generator" to
+                        mapOf(
+                            "style" to "legacy",
+                            Constants.KEY_PACKAGE_PARAMETER_ENABLED to true,
+                            Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_CLASS
+                        )
+            )
+        )
+
+        val code =
+            DartClassGenerator(
+                root,
+                mockConfig,
+                hasSvg = false,
+                hasSvgDep = false,
+                hasLottie = false,
+                hasLottieDep = false,
+                hasRive = false,
+                hasRiveDep = false,
+                flutterVersion = null
+            ).generate()
+
+        assertTrue(
+            "Typed leaf constructor should keep relative path",
+            code.contains("static const AssetGenImage logo = AssetGenImage('assets/logo.png');")
+        )
+        assertFalse(
+            "Typed leaf constructor should not embed package prefix",
+            code.contains(
+                "static const AssetGenImage logo = AssetGenImage('packages/my_awesome_package/assets/logo.png');"
+            )
+        )
+        assertTrue(
+            "Helper class should still expose package-prefixed path getter",
+            code.contains("String get path => 'packages/my_awesome_package/\$_assetName';")
+        )
+    }
+
+    @Test
     fun testRobustLeafTypeStringUsesPackagePrefixAndSkipsHelpers() {
         val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
         val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)

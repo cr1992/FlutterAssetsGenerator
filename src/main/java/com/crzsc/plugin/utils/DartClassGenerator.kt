@@ -190,12 +190,8 @@ class DartClassGenerator(
             }
             nameMap[finalName] = 1
 
-            var fullPath = "$prefix${file.path}"
-            if (isPackageParameterEnabled) {
-                if (packageName != null) {
-                    fullPath = "packages/$packageName/$fullPath"
-                }
-            }
+            val fullPath = "$prefix${file.path}"
+            val leafPath = buildLeafPath(fullPath)
             if (!isStringLeafMode) {
                 when (file.type) {
                     MediaType.IMAGE ->
@@ -207,10 +203,10 @@ class DartClassGenerator(
                     MediaType.RIVE ->
                         buffer.append("  static const RiveGenImage $finalName = RiveGenImage('$fullPath');\n")
                     else ->
-                        buffer.append("  static const String $finalName = '$fullPath';\n")
+                        buffer.append("  static const String $finalName = '$leafPath';\n")
                 }
             } else {
-                buffer.append("  static const String $finalName = '$fullPath';\n")
+                buffer.append("  static const String $finalName = '$leafPath';\n")
             }
         }
 
