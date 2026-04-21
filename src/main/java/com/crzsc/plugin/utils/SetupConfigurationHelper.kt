@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -14,11 +15,14 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLMapping
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.system.measureTimeMillis
 
 object SetupConfigurationHelper {
     private val LOG = Logger.getInstance(SetupConfigurationHelper::class.java)
     private val appPlatformDirs = listOf("android", "ios", "web", "macos", "linux", "windows")
+    private const val PROGRAMMATIC_SAVE_SUPPRESSION_WINDOW_MS = 60_000L
+    private val programmaticPubspecUpdates = ConcurrentHashMap<String, Long>()
 
     fun findTargetConfig(
         configs: List<ModulePubSpecConfig>,
@@ -133,7 +137,22 @@ object SetupConfigurationHelper {
             added = true
         }
 
+        if (added) {
+            programmaticPubspecUpdates[pubspecFile.path] = System.currentTimeMillis()
+            FileDocumentManager.getInstance().getDocument(pubspecFile)?.let {
+                FileDocumentManager.getInstance().saveDocument(it)
+            }
+        }
+
         return added
+    }
+
+    fun consumeProgrammaticPubspecUpdate(path: String?): Boolean {
+        if (path.isNullOrBlank()) {
+            return false
+        }
+        val markedAt = programmaticPubspecUpdates.remove(path) ?: return false
+        return System.currentTimeMillis() - markedAt <= PROGRAMMATIC_SAVE_SUPPRESSION_WINDOW_MS
     }
 
     internal fun buildDefaultConfigurationContent(

@@ -3,6 +3,7 @@ package com.crzsc.plugin.listener
 import com.crzsc.plugin.utils.FileGenerator
 import com.crzsc.plugin.utils.FileHelperNew
 import com.crzsc.plugin.utils.ModulePubSpecConfig
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -11,6 +12,7 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 import com.intellij.util.Alarm
+import kotlin.system.measureTimeMillis
 
 class VfsAssetListener(private val project: Project) : BulkFileListener {
     companion object {
@@ -19,7 +21,7 @@ class VfsAssetListener(private val project: Project) : BulkFileListener {
     }
 
     private val fileGenerator = FileGenerator(project)
-    private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, project)
+    private val alarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, project)
     internal val pendingEvents = mutableListOf<VFileEvent>()
 
     override fun after(events: List<VFileEvent>) {
@@ -109,44 +111,61 @@ class VfsAssetListener(private val project: Project) : BulkFileListener {
             pendingEvents.clear()
         }
 
-        val assets = FileHelperNew.getAssets(project)
-        for (config in assets) {
-            if (!shouldHandleConfig(config)) {
-                continue
+        lateinit var assets: List<ModulePubSpecConfig>
+        val scanElapsedMs =
+            measureTimeMillis {
+                assets =
+                    ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                        FileHelperNew.getAssets(project)
+                    }
             }
+        LOG.info(
+            "$TAG project=${project.name} pendingEvents=${events.size} discoveredModules=${assets.size} scanElapsedMs=$scanElapsedMs"
+        )
 
-            for (event in events) {
-                val candidatePaths = collectCandidatePaths(event)
-                if (candidatePaths.isEmpty()) {
-                    LOG.info(
-                        "$TAG skip module=${config.module.name} source=${event.javaClass.simpleName} reason=no-candidate-path path=${event.path} file=${pathOf(event.file)}"
-                    )
-                    continue
-                }
+        val matchingElapsedMs =
+            measureTimeMillis {
+                for (config in assets) {
+                    if (!shouldHandleConfig(config)) {
+                        continue
+                    }
 
-                var matchedAsset: VirtualFile? = null
-                var matchedPath: String? = null
-                for (candidatePath in candidatePaths) {
-                    matchedAsset = findMatchingAsset(config, candidatePath)
-                    if (matchedAsset != null) {
-                        matchedPath = normalizePath(candidatePath)
-                        break
+                    for (event in events) {
+                        val candidatePaths = collectCandidatePaths(event)
+                        if (candidatePaths.isEmpty()) {
+                            LOG.info(
+                                "$TAG skip module=${config.module.name} source=${event.javaClass.simpleName} reason=no-candidate-path path=${event.path} file=${pathOf(event.file)}"
+                            )
+                            continue
+                        }
+
+                        var matchedAsset: VirtualFile? = null
+                        var matchedPath: String? = null
+                        for (candidatePath in candidatePaths) {
+                            matchedAsset = findMatchingAsset(config, candidatePath)
+                            if (matchedAsset != null) {
+                                matchedPath = normalizePath(candidatePath)
+                                break
+                            }
+                        }
+
+                        if (matchedAsset != null) {
+                            LOG.info(
+                                "$TAG trigger module=${config.module.name} source=${event.javaClass.simpleName} changed=$matchedPath matchedAsset=${normalizePath(matchedAsset.path)} candidates=$candidatePaths"
+                            )
+                            fileGenerator.generateOne(config)
+                            return
+                        }
+
+                        LOG.info(
+                            "$TAG skip module=${config.module.name} source=${event.javaClass.simpleName} candidates=$candidatePaths reason=no-asset-match"
+                        )
                     }
                 }
-
-                if (matchedAsset != null) {
-                    LOG.info(
-                        "$TAG trigger module=${config.module.name} source=${event.javaClass.simpleName} changed=$matchedPath matchedAsset=${normalizePath(matchedAsset.path)} candidates=$candidatePaths"
-                    )
-                    fileGenerator.generateOne(config)
-                    return
-                }
-
-                LOG.info(
-                    "$TAG skip module=${config.module.name} source=${event.javaClass.simpleName} candidates=$candidatePaths reason=no-asset-match"
-                )
             }
-        }
+        LOG.info(
+            "$TAG project=${project.name} pendingEvents=${events.size} matchingElapsedMs=$matchingElapsedMs"
+        )
     }
 
     private fun normalizePath(path: String): String {

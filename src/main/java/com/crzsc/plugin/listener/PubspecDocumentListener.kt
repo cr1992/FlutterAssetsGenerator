@@ -4,12 +4,15 @@ import com.crzsc.plugin.cache.PubspecConfig
 import com.crzsc.plugin.cache.PubspecConfigCache
 import com.crzsc.plugin.utils.FileGenerator
 import com.crzsc.plugin.utils.FileHelperNew
+import com.crzsc.plugin.utils.SetupConfigurationHelper
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
+import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import kotlin.system.measureTimeMillis
 import org.yaml.snakeyaml.Yaml
 
 /** pubspec.yaml 文档保存监听器 只在保存时检测配置变更并触发生成 */
@@ -45,22 +48,39 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
             "$TAG project=${project.name} saved=${pubspecFile.path}"
         )
 
-        val config =
-            FileHelperNew.getAssets(project).firstOrNull { it.pubRoot.pubspec == pubspecFile } ?: return
+        val module = ModuleUtilCore.findModuleForFile(pubspecFile, project) ?: return
+        val dataRef = arrayOfNulls<Map<String, Any>>(1)
+        val parseElapsedMs =
+            measureTimeMillis {
+                try {
+                    val content = document.text
+                    val yaml = Yaml()
+                    @Suppress("UNCHECKED_CAST")
+                    dataRef[0] = yaml.load<Map<String, Any>>(content)
+                } catch (e: Exception) {
+                    LOG.error("$TAG project=${project.name} failed-to-parse saved=${pubspecFile.path}", e)
+                }
+            }
+        val data = dataRef[0] ?: return
+        val config = FileHelperNew.getPubSpecConfigFromMap(module, pubspecFile, data) ?: return
         val modulePath = config.pubRoot.pubspec.parent.path
+        val newConfig = PubspecConfig.fromMap(data)
+
+        if (SetupConfigurationHelper.consumeProgrammaticPubspecUpdate(pubspecFile.path)) {
+            PubspecConfigCache.put(project, modulePath, newConfig)
+            LOG.info(
+                "$TAG module=${config.module.name} parseElapsedMs=$parseElapsedMs cached=programmatic-setup"
+            )
+            return
+        }
 
         // 使用 invokeLater 延迟读取配置和生成,确保读取到保存后的最新内容
         ApplicationManager.getApplication().invokeLater {
             if (!project.isDisposed) {
                 try {
-                    val content = document.text
-                    val yaml = Yaml()
-                    val data = yaml.load<Map<*, *>>(content) ?: return@invokeLater
-
-                    val newConfig = PubspecConfig.fromMap(data)
                     val hasChanged = PubspecConfigCache.hasChanged(project, modulePath, newConfig)
                     LOG.info(
-                        "$TAG module=${config.module.name} assetPaths=${newConfig.assetPaths} hasPluginConfig=${newConfig.hasPluginConfig} pluginEnabled=${newConfig.pluginEnabled} autoDetection=${newConfig.autoDetection} hasChanged=$hasChanged"
+                        "$TAG module=${config.module.name} parseElapsedMs=$parseElapsedMs assetPaths=${newConfig.assetPaths} hasPluginConfig=${newConfig.hasPluginConfig} pluginEnabled=${newConfig.pluginEnabled} autoDetection=${newConfig.autoDetection} hasChanged=$hasChanged"
                     )
 
                     if (!hasChanged) {
@@ -93,7 +113,7 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
                         FileHelperNew.getPubSpecConfigFromMap(
                             config.module,
                             config.pubRoot.pubspec,
-                            data as Map<String, Any>
+                            data
                         )
 
                     if (updatedConfig != null) {

@@ -1,7 +1,6 @@
 package com.crzsc.plugin.utils
 
 import com.crzsc.plugin.utils.PluginUtils.showNotify
-import com.intellij.codeInsight.actions.ReformatCodeProcessor
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
@@ -17,6 +16,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import java.io.File
+import kotlin.system.measureTimeMillis
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.util.findModule
 import org.jetbrains.yaml.YAMLElementGenerator
@@ -32,22 +32,77 @@ class FileGenerator(private val project: Project) {
     }
 
     /** 为所有模块重新生成 */
-    /** 为所有模块重新生成 */
     fun generateAll() {
-        val allConfigs = FileHelperNew.getAssets(project)
-        cleanupDisabledConfigs(allConfigs)
-        val assets = filterEnabledConfigs(allConfigs)
-        LOG.info(
-            "[FlutterAssetsGenerator #${project.name}] ${assets.size} module(s) available for generation out of ${allConfigs.size} discovered module(s)"
-        )
-        if (shouldShowSetupPrompt(assets)) {
-            logExcludedGenerationCandidates(allConfigs)
-            showNotify(SETUP_REQUIRED_MESSAGE)
-            return
-        }
-        for (config in assets) {
-            generateOne(config)
-        }
+        ProgressManager.getInstance()
+            .run(
+                object : Task.Backgroundable(project, "Generating Assets", false) {
+                    override fun run(indicator: ProgressIndicator) {
+                        indicator.text = "Scanning Flutter modules"
+                        lateinit var allConfigs: List<ModulePubSpecConfig>
+                        val scanElapsedMs =
+                            measureTimeMillis {
+                                allConfigs =
+                                    ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                                        FileHelperNew.getAssets(project)
+                                    }
+                            }
+
+                        val assets = filterEnabledConfigs(allConfigs)
+                        LOG.info(
+                            "[FlutterAssetsGenerator #${project.name}] generation scan complete discoveredModules=${allConfigs.size} enabledModules=${assets.size} scanElapsedMs=$scanElapsedMs"
+                        )
+
+                        if (shouldShowSetupPrompt(assets)) {
+                            logExcludedGenerationCandidates(allConfigs)
+                            showNotify(SETUP_REQUIRED_MESSAGE)
+                            return
+                        }
+
+                        cleanupDisabledConfigs(allConfigs)
+
+                        LOG.info(
+                            "[FlutterAssetsGenerator #${project.name}] generation mode=sequential queuedModules=${assets.size}"
+                        )
+
+                        var changedModules = 0
+                        var unchangedModules = 0
+                        val totalElapsedMs =
+                            measureTimeMillis {
+                                assets.forEachIndexed { index, config ->
+                                    indicator.checkCanceled()
+                                    val result =
+                                        generateOneBlocking(
+                                            config = config,
+                                            indicator = indicator,
+                                            mode = "batch",
+                                            moduleIndex = index + 1,
+                                            moduleCount = assets.size,
+                                            notifyUser = false
+                                        )
+                                    if (result.completed) {
+                                        if (result.wroteContent) {
+                                            changedModules++
+                                        } else {
+                                            unchangedModules++
+                                        }
+                                    }
+                                }
+                            }
+
+                        LOG.info(
+                            "[FlutterAssetsGenerator #${project.name}] generation batch complete processedModules=${assets.size} changedModules=$changedModules unchangedModules=$unchangedModules totalElapsedMs=$totalElapsedMs"
+                        )
+
+                        if (changedModules > 0) {
+                            showNotify(
+                                "Generated assets updated in $changedModules module(s), $unchangedModules unchanged"
+                            )
+                        } else {
+                            showNotify("All generated assets are up to date ($unchangedModules module(s))")
+                        }
+                    }
+                }
+            )
     }
 
     /** 生成单个模块文件 (异步) */
@@ -69,16 +124,7 @@ class FileGenerator(private val project: Project) {
                         false
                     ) {
                     override fun run(indicator: ProgressIndicator) {
-                        val data = prepareData(config)
-
-                        // Switch to EDT for writing
-                        ApplicationManager.getApplication().invokeLater {
-                            if (!project.isDisposed) {
-                                WriteCommandAction.runWriteCommandAction(project) {
-                                    performWrite(config, data)
-                                }
-                            }
-                        }
+                        generateOneBlocking(config, indicator, mode = "single")
                     }
                 }
             )
@@ -157,102 +203,286 @@ class FileGenerator(private val project: Project) {
     private data class GenerationData(
         val content: String,
         val depsToAdd: Map<String, String>,
-        val flutterVersion: SemanticVersion?
+        val flutterVersion: SemanticVersion?,
+        val assetTreeElapsedMs: Long,
+        val dependencyCheckElapsedMs: Long,
+        val flutterVersionElapsedMs: Long,
+        val dependencySelectionElapsedMs: Long,
+        val codegenElapsedMs: Long
     )
+
+    private data class WriteMetrics(
+        val dependencyAddElapsedMs: Long,
+        val contentWriteElapsedMs: Long,
+        val reformatElapsedMs: Long,
+        val totalWriteElapsedMs: Long,
+        val wroteContent: Boolean
+    )
+
+    private data class GenerationResult(
+        val wroteContent: Boolean,
+        val completed: Boolean
+    )
+
+    private data class ReadSnapshot(
+        val rootNode: AssetNode,
+        val hasSvg: Boolean,
+        val hasLottie: Boolean,
+        val hasRive: Boolean,
+        val hasSvgDep: Boolean,
+        val hasLottieDep: Boolean,
+        val hasRiveDep: Boolean
+    )
+
+    private fun generateOneBlocking(
+        config: ModulePubSpecConfig,
+        indicator: ProgressIndicator?,
+        mode: String,
+        moduleIndex: Int? = null,
+        moduleCount: Int? = null,
+        notifyUser: Boolean = true
+    ): GenerationResult {
+        val moduleTag = "[FlutterAssetsGenerator #${project.name}/${config.module.name}]"
+        val positionTag =
+            if (moduleIndex != null && moduleCount != null) {
+                " modulePosition=$moduleIndex/$moduleCount"
+            } else {
+                ""
+            }
+
+        var result = GenerationResult(wroteContent = false, completed = false)
+        val totalElapsedMs =
+            measureTimeMillis {
+                indicator?.checkCanceled()
+                indicator?.text =
+                    if (moduleIndex != null && moduleCount != null) {
+                        "Generating module $moduleIndex/$moduleCount: ${config.module.name}"
+                    } else {
+                        "Preparing asset tree for ${config.module.name}"
+                    }
+
+                val prepareElapsedMs: Long
+                lateinit var data: GenerationData
+                prepareElapsedMs =
+                    measureTimeMillis {
+                        data = prepareData(config)
+                    }
+                LOG.info(
+                    "$moduleTag mode=$mode$positionTag prepareElapsedMs=$prepareElapsedMs assetTreeElapsedMs=${data.assetTreeElapsedMs} dependencyCheckElapsedMs=${data.dependencyCheckElapsedMs} flutterVersionElapsedMs=${data.flutterVersionElapsedMs} dependencySelectionElapsedMs=${data.dependencySelectionElapsedMs} codegenElapsedMs=${data.codegenElapsedMs} depsToAdd=${data.depsToAdd.keys}"
+                )
+
+                indicator?.checkCanceled()
+                indicator?.text =
+                    if (moduleIndex != null && moduleCount != null) {
+                        "Writing module $moduleIndex/$moduleCount: ${config.module.name}"
+                    } else {
+                        "Writing generated file for ${config.module.name}"
+                    }
+
+                val edtDispatchRequestedAt = System.currentTimeMillis()
+                var edtWaitElapsedMs = 0L
+                var writeMetrics: WriteMetrics? = null
+                ApplicationManager.getApplication().invokeAndWait {
+                    if (!project.isDisposed) {
+                        edtWaitElapsedMs = System.currentTimeMillis() - edtDispatchRequestedAt
+                        WriteCommandAction.runWriteCommandAction(project) {
+                            writeMetrics = performWrite(config, data, notifyUser)
+                        }
+                    }
+                }
+
+                val resolvedWriteMetrics = writeMetrics
+                if (resolvedWriteMetrics == null) {
+                    LOG.info("$moduleTag mode=$mode$positionTag writeSkipped=project-disposed")
+                    return@measureTimeMillis
+                }
+
+                result =
+                    GenerationResult(
+                        wroteContent = resolvedWriteMetrics.wroteContent,
+                        completed = true
+                    )
+                LOG.info(
+                    "$moduleTag mode=$mode$positionTag edtWaitElapsedMs=$edtWaitElapsedMs dependencyAddElapsedMs=${resolvedWriteMetrics.dependencyAddElapsedMs} contentWriteElapsedMs=${resolvedWriteMetrics.contentWriteElapsedMs} reformatElapsedMs=${resolvedWriteMetrics.reformatElapsedMs} totalWriteElapsedMs=${resolvedWriteMetrics.totalWriteElapsedMs} wroteContent=${resolvedWriteMetrics.wroteContent} formatting=skipped-generated-file"
+                )
+            }
+
+        LOG.info("$moduleTag mode=$mode$positionTag moduleTotalElapsedMs=$totalElapsedMs")
+        return result
+    }
 
     /** 准备数据 (后台线程执行) */
     private fun prepareData(config: ModulePubSpecConfig): GenerationData {
-        return ReadAction.compute<GenerationData, RuntimeException> {
-            val ignorePath = FileHelperNew.getPathIgnore(config)
-            val moduleRootPath = config.pubRoot.path
+        var assetTreeElapsedMs = 0L
+        var dependencyCheckElapsedMs = 0L
+        val snapshot =
+            ReadAction.compute<ReadSnapshot, RuntimeException> {
+                val ignorePath = FileHelperNew.getPathIgnore(config)
+                val moduleRootPath = config.pubRoot.path
 
-            // 1. 构建资源树 (Build Asset Tree)
-            val rootNode = AssetTreeBuilder.build(config.assetVFiles, moduleRootPath, ignorePath)
+                // 1. 构建资源树 (Build Asset Tree)
+                lateinit var rootNode: AssetNode
+                assetTreeElapsedMs =
+                    measureTimeMillis {
+                        rootNode = AssetTreeBuilder.build(config.assetVFiles, moduleRootPath, ignorePath)
+                    }
 
-            // 2. 依赖检查
-            val hasSvg = traverseFindType(rootNode, MediaType.SVG)
-            val hasLottie = traverseFindType(rootNode, MediaType.LOTTIE)
-            val hasRive = traverseFindType(rootNode, MediaType.RIVE)
+                // 2. 依赖检查
+                lateinit var result: ReadSnapshot
+                dependencyCheckElapsedMs =
+                    measureTimeMillis {
+                        val hasSvg = traverseFindType(rootNode, MediaType.SVG)
+                        val hasLottie = traverseFindType(rootNode, MediaType.LOTTIE)
+                        val hasRive = traverseFindType(rootNode, MediaType.RIVE)
 
-            val pubspecFile = config.pubRoot.pubspec
-            var hasSvgDep = DependencyHelper.hasDependency(project, pubspecFile, "flutter_svg")
-            var hasLottieDep = DependencyHelper.hasDependency(project, pubspecFile, "lottie")
-            var hasRiveDep = DependencyHelper.hasDependency(project, pubspecFile, "rive")
+                        val pubspecFile = config.pubRoot.pubspec
+                        val hasSvgDep = DependencyHelper.hasDependency(project, pubspecFile, "flutter_svg")
+                        val hasLottieDep = DependencyHelper.hasDependency(project, pubspecFile, "lottie")
+                        val hasRiveDep = DependencyHelper.hasDependency(project, pubspecFile, "rive")
 
-            // 检测 Flutter 版本 (IO / Process)
-            val flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
+                        result =
+                            ReadSnapshot(
+                                rootNode = rootNode,
+                                hasSvg = hasSvg,
+                                hasLottie = hasLottie,
+                                hasRive = hasRive,
+                                hasSvgDep = hasSvgDep,
+                                hasLottieDep = hasLottieDep,
+                                hasRiveDep = hasRiveDep
+                            )
+                    }
 
-            val depsToAdd = mutableMapOf<String, String>()
+                result
+            }
 
-            if (shouldAutoAddTypedDependencies(config)) {
-                if (hasSvg && !hasSvgDep) {
-                    val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
-                    depsToAdd["flutter_svg"] = svgVersion
-                    hasSvgDep = true
-                }
-                if (hasLottie && !hasLottieDep) {
-                    val lottieVersion = DependencyVersionSelector.getLottieVersion(flutterVersion)
-                    depsToAdd["lottie"] = lottieVersion
-                    hasLottieDep = true
-                }
-                if (hasRive && !hasRiveDep) {
-                    val riveVersion = DependencyVersionSelector.getRiveVersion(flutterVersion)
-                    depsToAdd["rive"] = riveVersion
-                    hasRiveDep = true
+        val pubspecFile = config.pubRoot.pubspec
+        val needsFlutterVersion =
+            shouldAutoAddTypedDependencies(config) || snapshot.hasSvg
+
+        // 检测 Flutter 版本 (IO / Process)，必须在 ReadAction 外执行，避免长读锁阻塞 EDT 写操作。
+        var flutterVersion: SemanticVersion? = null
+        val flutterVersionElapsedMs =
+            measureTimeMillis {
+                if (needsFlutterVersion) {
+                    flutterVersion = FlutterVersionHelper.getFlutterVersion(project, pubspecFile)
                 }
             }
 
-            // 3. 生成代码 (Generate Code)
-            val content =
-                DartClassGenerator(
-                    rootNode,
-                    config,
-                    hasSvg,
-                    hasSvgDep,
-                    hasLottie,
-                    hasLottieDep,
-                    hasRive,
-                    hasRiveDep,
-                    flutterVersion
-                )
-                    .generate()
+        var hasSvgDep = snapshot.hasSvgDep
+        var hasLottieDep = snapshot.hasLottieDep
+        var hasRiveDep = snapshot.hasRiveDep
+        val depsToAdd = mutableMapOf<String, String>()
 
-            GenerationData(content, depsToAdd, flutterVersion)
-        }
-    }
-
-    /** 执行写入 (EDT 执行) */
-    private fun performWrite(config: ModulePubSpecConfig, data: GenerationData) {
-        val pubspecFile = config.pubRoot.pubspec
-
-        // 添加依赖
-        if (data.depsToAdd.isNotEmpty()) {
-            DependencyHelper.addDependencies(project, pubspecFile, data.depsToAdd)
-        }
-
-        // 写入文件
-        val psiManager = PsiManager.getInstance(project)
-        val psiDocumentManager = PsiDocumentManager.getInstance(project)
-        FileHelperNew.getGeneratedFile(config).let { generated ->
-            psiManager.findFile(generated)?.let { dartFile ->
-                psiDocumentManager.getDocument(dartFile)?.let { document ->
-                    if (document.text != data.content) {
-                        document.setText(data.content)
-                        psiDocumentManager.commitDocument(document)
-
-                        try {
-                            ReformatCodeProcessor(project, dartFile, null, false).run()
-                        } catch (e: Exception) {
-                            LOG.warn("Failed to reformat file: ${dartFile.name}", e)
-                        }
-
-                        showNotify("${config.module.name} : assets generate succeed")
-                    } else {
-                        showNotify("${config.module.name} : nothing changed")
+        val dependencySelectionElapsedMs =
+            measureTimeMillis {
+                if (shouldAutoAddTypedDependencies(config)) {
+                    if (snapshot.hasSvg && !hasSvgDep) {
+                        val svgVersion = DependencyVersionSelector.getFlutterSvgVersion(flutterVersion)
+                        depsToAdd["flutter_svg"] = svgVersion
+                        hasSvgDep = true
+                    }
+                    if (snapshot.hasLottie && !hasLottieDep) {
+                        val lottieVersion = DependencyVersionSelector.getLottieVersion(flutterVersion)
+                        depsToAdd["lottie"] = lottieVersion
+                        hasLottieDep = true
+                    }
+                    if (snapshot.hasRive && !hasRiveDep) {
+                        val riveVersion = DependencyVersionSelector.getRiveVersion(flutterVersion)
+                        depsToAdd["rive"] = riveVersion
+                        hasRiveDep = true
                     }
                 }
             }
-        }
+
+        lateinit var content: String
+        val codegenElapsedMs =
+            measureTimeMillis {
+                content =
+                    DartClassGenerator(
+                        snapshot.rootNode,
+                        config,
+                        snapshot.hasSvg,
+                        hasSvgDep,
+                        snapshot.hasLottie,
+                        hasLottieDep,
+                        snapshot.hasRive,
+                        hasRiveDep,
+                        flutterVersion
+                    )
+                        .generate()
+            }
+
+        return GenerationData(
+            content = content,
+            depsToAdd = depsToAdd,
+            flutterVersion = flutterVersion,
+            assetTreeElapsedMs = assetTreeElapsedMs,
+            dependencyCheckElapsedMs = dependencyCheckElapsedMs,
+            flutterVersionElapsedMs = flutterVersionElapsedMs,
+            dependencySelectionElapsedMs = dependencySelectionElapsedMs,
+            codegenElapsedMs = codegenElapsedMs
+        )
+    }
+
+    /** 执行写入 (EDT 执行) */
+    private fun performWrite(
+        config: ModulePubSpecConfig,
+        data: GenerationData,
+        notifyUser: Boolean
+    ): WriteMetrics {
+        val pubspecFile = config.pubRoot.pubspec
+        val moduleTag = "[FlutterAssetsGenerator #${project.name}/${config.module.name}]"
+        var dependencyAddElapsedMs = 0L
+        var contentWriteElapsedMs = 0L
+        var wroteContent = false
+
+        val totalWriteElapsedMs =
+            measureTimeMillis {
+                if (data.depsToAdd.isNotEmpty()) {
+                    LOG.info("$moduleTag addingMissingDependencies=${data.depsToAdd.keys}")
+                    dependencyAddElapsedMs =
+                        measureTimeMillis {
+                            DependencyHelper.addDependencies(project, pubspecFile, data.depsToAdd)
+                        }
+                }
+
+                val psiManager = PsiManager.getInstance(project)
+                val psiDocumentManager = PsiDocumentManager.getInstance(project)
+                FileHelperNew.getGeneratedFile(config).let { generated ->
+                    psiManager.findFile(generated)?.let { dartFile ->
+                        psiDocumentManager.getDocument(dartFile)?.let { document ->
+                            if (document.text != data.content) {
+                                wroteContent = true
+                                contentWriteElapsedMs =
+                                    measureTimeMillis {
+                                        document.setText(data.content)
+                                        psiDocumentManager.commitDocument(document)
+                                    }
+                                LOG.info(
+                                    "$moduleTag writeElapsedMs=$contentWriteElapsedMs file=${generated.path}"
+                                )
+
+                                if (notifyUser) {
+                                    showNotify("${config.module.name} : assets generate succeed")
+                                }
+                            } else {
+                                LOG.info("$moduleTag writeSkipped=no-content-change file=${generated.path}")
+                                if (notifyUser) {
+                                    showNotify("${config.module.name} : nothing changed")
+                                }
+                            }
+                        } ?: LOG.warn("$moduleTag documentUnavailable file=${generated.path}")
+                    } ?: LOG.warn("$moduleTag psiFileUnavailable file=${generated.path}")
+                }
+            }
+
+        return WriteMetrics(
+            dependencyAddElapsedMs = dependencyAddElapsedMs,
+            contentWriteElapsedMs = contentWriteElapsedMs,
+            reformatElapsedMs = 0L,
+            totalWriteElapsedMs = totalWriteElapsedMs,
+            wroteContent = wroteContent
+        )
     }
 
     /** 将所选择目录及子目录添加到yaml配置 */

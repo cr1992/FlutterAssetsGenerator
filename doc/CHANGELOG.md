@@ -2,6 +2,10 @@
 
 [//]: # (# FlutterAssetsGenerator Changelog)
 ## [Unreleased]
+- **Generation EDT Reduction**: Batch generation now reuses a single background flow, resolves Flutter version once per run, skips generated-file reformatting, and summarizes notifications at the end.
+  - **生成 EDT 降载**: 批量生成现在复用单条后台流程、每轮只解析一次 Flutter 版本、跳过生成文件格式化，并在结束时汇总通知。
+- **Monorepo Performance**: In the 2026-04-21 monorepo reproduction, batch generation dropped from `23.7s` to `1.512s` (`15.67x` faster, `93.6%` lower total time), and average per-module write time dropped from `1339.88ms` to `7.62ms` (`175.72x` faster, `99.4%` lower).
+  - **Monorepo 性能数据**: 在 2026-04-21 的 monorepo 复现日志中，批量生成总耗时从 `23.7s` 降到 `1.512s`（`15.67x` 提升，累计耗时下降 `93.6%`），单模块平均写入耗时从 `1339.88ms` 降到 `7.62ms`（`175.72x` 提升，写入耗时下降 `99.4%`）。
 - **Module-Type Package Defaults**: Setup now defaults `package_parameter_enabled` to `false` for Flutter apps and add-to-app Flutter modules, and to `true` for other Flutter packages.
   - **模块类型默认值**: 一键配置现在会对 Flutter app 和 add-to-app Flutter module 默认关闭 `package_parameter_enabled`，对其他 Flutter package 默认开启。
 - **AI Guidance Header**: Generated Dart files now include an AI-facing header that points assistants to the project usage guide before changing asset access code.

@@ -26,7 +26,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
-    - **Performance**: Fully **Asynchronous** generation process that never blocks the IDE UI. Say goodbye to freezes.
+    - **Performance**: Setup and generation run asynchronously, and generated-file formatting is skipped to keep EDT writes minimal. In the 2026-04-21 monorepo reproduction, batch generation dropped from `23.7s` to `1.512s` (`15.67x` faster, `93.6%` lower total time), while average per-module write time dropped from `1339.88ms` to `7.62ms` (`175.72x` faster, `99.4%` lower).
 
 ### Usage
 
@@ -102,7 +102,7 @@ Modules without a `flutter_assets_generator` block are not monitored automatical
 
 - **Menu**: Click `Tools` -> `Flutter Assets Generator` -> `Generate Assets`.
 - **Shortcut**: Press `Option`(Mac) / `Alt`(Win) + `G`.
-- **Auto Format**: Generated code is automatically formatted.
+- **Generated File Writes**: Generated Dart files are written directly without an additional IDE reformat pass, reducing EDT stalls in large monorepos.
 
 #### 4. Access Assets in Code
 
@@ -154,7 +154,7 @@ String path = Assets.images.logo.path;
 -   **智能自动更新**：
     -   **资源文件**: 监听图片文件增删，自动重新生成。
     -   **配置文件**: 监听 `pubspec.yaml` 的**保存**动作 (Cmd+S)。智能 Diff 算法确保只在配置真正变化时构建。
-    -   **性能优化**: 核心生成逻辑完全**异步化**，不再阻塞 IDE UI 线程，彻底告别卡顿。
+    -   **性能优化**: setup 与生成流程都已异步化，并跳过生成文件的额外 IDE 格式化。在 2026-04-21 的 monorepo 实测日志里，批量生成总耗时从 `23.7s` 降到 `1.512s`（`15.67x` 提升，累计耗时下降 `93.6%`），单模块平均写入耗时从 `1339.88ms` 降到 `7.62ms`（`175.72x` 提升，写入耗时下降 `99.4%`）。
 
 ### 使用方法
 
@@ -237,7 +237,7 @@ flutter_assets_generator:
 
 -   **菜单**: 点击 `Tools` -> `Flutter Assets Generator` -> `Generate Assets`。
 -   **快捷键**: 按下 `Option`(Mac) / `Alt`(Win) + `G`。
--   **自动格式化**: 生成的代码会自动格式化。
+-   **生成文件写入**: 生成的 Dart 文件会直接写入，不再额外触发 IDE 格式化，以降低大型 monorepo 下的 EDT 卡顿。
 
 #### 4. 代码调用
 

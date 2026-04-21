@@ -5,6 +5,7 @@ import com.crzsc.plugin.listener.PubspecDocumentListener
 import com.crzsc.plugin.listener.VfsAssetListener
 import com.crzsc.plugin.utils.Constants
 import com.crzsc.plugin.utils.ModulePubSpecConfig
+import com.crzsc.plugin.utils.SetupConfigurationHelper
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -31,6 +32,50 @@ class ListenerLogicTest {
         assertFalse(PubspecDocumentListener.shouldTriggerGeneration(disabledConfig, hasChanged = true))
         assertFalse(PubspecDocumentListener.shouldTriggerGeneration(missingConfig, hasChanged = true))
         assertFalse(PubspecDocumentListener.shouldTriggerGeneration(autoDetectionOff, hasChanged = true))
+    }
+
+    @Test
+    fun testProgrammaticSetupSaveSuppressionConsumesOnlyOnce() {
+        val path = "/project/pubspec.yaml"
+
+        assertFalse(SetupConfigurationHelper.consumeProgrammaticPubspecUpdate(path))
+
+        val field =
+            SetupConfigurationHelper::class.java.getDeclaredField("programmaticPubspecUpdates")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val updates = field.get(SetupConfigurationHelper) as MutableMap<String, Long>
+        updates[path] = System.currentTimeMillis()
+
+        assertTrue(SetupConfigurationHelper.consumeProgrammaticPubspecUpdate(path))
+        assertFalse(SetupConfigurationHelper.consumeProgrammaticPubspecUpdate(path))
+    }
+
+    @Test
+    fun testProgrammaticSetupConfigCanBeCachedWithoutTriggeringGeneration() {
+        val config =
+            PubspecConfig(
+                assetPaths = listOf("assets/"),
+                flutterSvgVersion = null,
+                lottieVersion = null,
+                flutterVersion = null,
+                dartVersion = null,
+                hasPluginConfig = true,
+                pluginEnabled = true,
+                autoDetection = true,
+                autoAddDependencies = true,
+                outputDir = "generated",
+                className = "Assets",
+                outputFilename = "assets",
+                filenameSplitPattern = "[-_]",
+                pathIgnore = emptyList(),
+                generationStyle = "robust",
+                nameStyle = "camel",
+                leafType = "class",
+                packageParameterEnabled = false
+            )
+
+        assertFalse(PubspecDocumentListener.shouldTriggerGeneration(config, hasChanged = false))
     }
 
     @Test
