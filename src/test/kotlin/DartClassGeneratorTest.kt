@@ -1,9 +1,11 @@
 package com.crzsc.plugin.test
 
 import com.crzsc.plugin.utils.AssetNode
+import com.crzsc.plugin.utils.Constants
 import com.crzsc.plugin.utils.DartClassGenerator
 import com.crzsc.plugin.utils.MediaType
 import com.crzsc.plugin.utils.ModulePubSpecConfig
+import com.intellij.openapi.vfs.VirtualFile
 import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.Mockito
@@ -179,10 +181,378 @@ class DartClassGeneratorTest {
         )
     }
 
-    private fun createMockConfig(): ModulePubSpecConfig {
-        // Mock ModulePubSpecConfig
+    @Test
+    fun testLegacyCamelStyleKeepsOldNumericPrefixBehavior() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)
+        root.children.add(assetsDir)
+
+        val imagesDirVf = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(imagesDirVf.name).thenReturn("images")
+        val assetsDirVf = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(imagesDirVf.parent).thenReturn(assetsDirVf)
+
+        val fileVf = Mockito.mock(VirtualFile::class.java)
+        Mockito.`when`(fileVf.parent).thenReturn(imagesDirVf)
+
+        assetsDir.children.add(
+            AssetNode("0", "assets/images/0.png", MediaType.IMAGE, fileVf)
+        )
+
+        val config =
+            createMockConfig(
+                mapOf(
+                    "style" to "legacy",
+                    Constants.KEY_NAME_STYLE to Constants.NAME_STYLE_CAMEL,
+                    Constants.KEY_NAMED_WITH_PARENT to true
+                )
+            )
+
+        val generatedCode =
+            DartClassGenerator(
+                root,
+                config,
+                hasSvg = false,
+                hasSvgDep = false,
+                hasLottie = false,
+                hasLottieDep = false,
+                hasRive = false,
+                hasRiveDep = false,
+                flutterVersion = null
+            )
+                .generate()
+
+        assertTrue(
+            generatedCode.contains(
+                "static const String images0 = 'assets/images/0.png';"
+            )
+        )
+        assertFalse(generatedCode.contains("imagesA0"))
+    }
+
+    @Test
+    fun testSnakeNameStyleAppliesToGeneratedNames() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = AssetNode("assets", "assets", MediaType.DIRECTORY, null)
+        root.children.add(assetsDir)
+        assetsDir.children.add(
+            AssetNode("my-image.png", "assets/my-image.png", MediaType.IMAGE, null)
+        )
+
+        val config =
+            createMockConfig(
+                mapOf(
+                    Constants.KEY_NAME_STYLE to Constants.NAME_STYLE_SNAKE
+                )
+            )
+
+        val generatedCode =
+            DartClassGenerator(
+                root,
+                config,
+                hasSvg = false,
+                hasSvgDep = false,
+                hasLottie = false,
+                hasLottieDep = false,
+                hasRive = false,
+                hasRiveDep = false,
+                flutterVersion = null
+            )
+                .generate()
+
+        assertTrue(
+            generatedCode.contains(
+                "static const AssetGenImage my_image_png = AssetGenImage('assets/my-image.png');"
+            )
+        )
+    }
+
+    @Test
+    fun testGeneratedFileHeaderIncludesAiDocumentationHint() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        assetsDir.children.add(fileNode("logo", "assets/logo.png", MediaType.IMAGE))
+        root.children.add(assetsDir)
+
+        val robustCode = createGenerator(root).generate()
+        val legacyCode = createGenerator(root, mapOf("style" to "legacy")).generate()
+
+        assertTrue(
+            robustCode.contains(
+                "///For AI assistants: read the project usage guide before changing asset access code."
+            )
+        )
+        assertTrue(
+            robustCode.contains("///Docs: https://github.com/cr1992/FlutterAssetsGenerator")
+        )
+        assertTrue(
+            legacyCode.contains(
+                "///For AI assistants: read the project usage guide before changing asset access code."
+            )
+        )
+        assertTrue(
+            legacyCode.contains("///Docs: https://github.com/cr1992/FlutterAssetsGenerator")
+        )
+    }
+
+    @Test
+    fun testRobustDirectoryClassNamesAreUniqueForSameLeafFolderName() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        val iconsDir = directoryNode("icons", "assets/icons")
+        val imagesDir = directoryNode("images", "assets/images")
+        val iconsFolder = directoryNode("my_folder", "assets/icons/my_folder")
+        val imagesFolder = directoryNode("my_folder", "assets/images/my_folder")
+        iconsFolder.children.add(fileNode("user", "assets/icons/my_folder/user.png", MediaType.IMAGE))
+        imagesFolder.children.add(fileNode("bg", "assets/images/my_folder/bg.png", MediaType.IMAGE))
+        iconsDir.children.add(iconsFolder)
+        imagesDir.children.add(imagesFolder)
+        assetsDir.children.add(iconsDir)
+        assetsDir.children.add(imagesDir)
+        root.children.add(assetsDir)
+
+        val generatedCode = createGenerator(root).generate()
+
+        assertTrue(generatedCode.contains("static const \$AssetsGenIcons icons = \$AssetsGenIcons();"))
+        assertTrue(generatedCode.contains("static const \$AssetsGenImages images = \$AssetsGenImages();"))
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenIconsMyFolder myFolder = const \$AssetsGenIconsMyFolder();"
+            )
+        )
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenImagesMyFolder myFolder = const \$AssetsGenImagesMyFolder();"
+            )
+        )
+        assertTrue(generatedCode.contains("class \$AssetsGenIconsMyFolder {"))
+        assertTrue(generatedCode.contains("class \$AssetsGenImagesMyFolder {"))
+    }
+
+    @Test
+    fun testRobustDirectoryClassNamesAreUniqueForMultipleRootsWithSameTree() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        val brandingDir = directoryNode("branding", "branding")
+        val assetsIcons = directoryNode("icons", "assets/icons")
+        val brandingAssets = directoryNode("assets", "branding/assets")
+        val brandingIcons = directoryNode("icons", "branding/assets/icons")
+        val assetsCommon = directoryNode("common", "assets/icons/common")
+        val brandingCommon = directoryNode("common", "branding/assets/icons/common")
+        assetsCommon.children.add(fileNode("user", "assets/icons/common/user.png", MediaType.IMAGE))
+        brandingCommon.children.add(
+            fileNode("user", "branding/assets/icons/common/user.png", MediaType.IMAGE)
+        )
+        assetsIcons.children.add(assetsCommon)
+        brandingIcons.children.add(brandingCommon)
+        assetsDir.children.add(assetsIcons)
+        brandingAssets.children.add(brandingIcons)
+        brandingDir.children.add(brandingAssets)
+        root.children.add(assetsDir)
+        root.children.add(brandingDir)
+
+        val generatedCode = createGenerator(root).generate()
+
+        assertTrue(generatedCode.contains("class \$AssetsGenAssetsIconsCommon {"))
+        assertTrue(generatedCode.contains("class \$AssetsGenBrandingAssetsIconsCommon {"))
+        assertFalse(generatedCode.contains("class \$AssetsGenCommon {"))
+    }
+
+    @Test
+    fun testRobustKeepsIntermediateDirectoriesForDeepPath() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        val imagesDir = directoryNode("images", "assets/images")
+        val drawerDir = directoryNode("drawer", "assets/images/drawer")
+        val backgroundsDir = directoryNode("backgrounds", "assets/images/drawer/backgrounds")
+        backgroundsDir.children.add(
+            fileNode("bg", "assets/images/drawer/backgrounds/bg.png", MediaType.IMAGE)
+        )
+        drawerDir.children.add(backgroundsDir)
+        imagesDir.children.add(drawerDir)
+        assetsDir.children.add(imagesDir)
+        root.children.add(assetsDir)
+
+        val generatedCode = createGenerator(root).generate()
+
+        assertTrue(generatedCode.contains("static const \$AssetsGenImages images = \$AssetsGenImages();"))
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenImagesDrawer drawer = const \$AssetsGenImagesDrawer();"
+            )
+        )
+        assertTrue(
+            generatedCode.contains(
+                "final \$AssetsGenImagesDrawerBackgrounds backgrounds = const \$AssetsGenImagesDrawerBackgrounds();"
+            )
+        )
+        assertFalse(
+            generatedCode.contains(
+                "final \$AssetsGenImagesBackgrounds backgrounds = const \$AssetsGenImagesBackgrounds();"
+            )
+        )
+    }
+
+    @Test
+    fun testRootDoesNotFlattenWhenSingleRootDirectoryIsNotAssets() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val brandingDir = directoryNode("branding", "branding")
+        val iconsDir = directoryNode("icons", "branding/icons")
+        iconsDir.children.add(fileNode("logo", "branding/icons/logo.png", MediaType.IMAGE))
+        brandingDir.children.add(iconsDir)
+        root.children.add(brandingDir)
+
+        val generatedCode = createGenerator(root).generate()
+
+        assertTrue(
+            generatedCode.contains(
+                "static const \$AssetsGenBranding branding = \$AssetsGenBranding();"
+            )
+        )
+        assertFalse(
+            generatedCode.contains(
+                "static const \$AssetsGenIcons icons = \$AssetsGenIcons();"
+            )
+        )
+    }
+
+    @Test
+    fun testRobustLeafTypeStringGeneratesHierarchicalStringLeaves() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        val iconsDir = directoryNode("icons", "assets/icons")
+        iconsDir.children.add(fileNode("user", "assets/icons/user.png", MediaType.IMAGE))
+        assetsDir.children.add(iconsDir)
+        root.children.add(assetsDir)
+
+        val generatedCode =
+            createGenerator(
+                root,
+                mapOf(Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING)
+            ).generate()
+
+        assertTrue(
+            generatedCode.contains(
+                "static const \$AssetsGenIcons icons = \$AssetsGenIcons();"
+            )
+        )
+        assertTrue(generatedCode.contains("final String user = 'assets/icons/user.png';"))
+        assertFalse(generatedCode.contains("class AssetGenImage {"))
+    }
+
+    @Test
+    fun testLegacyStyleIgnoresLeafTypeString() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        assetsDir.children.add(fileNode("logo", "assets/logo.png", MediaType.IMAGE))
+        root.children.add(assetsDir)
+
+        val generatedCode =
+            createGenerator(
+                root,
+                mapOf(
+                    "style" to "legacy",
+                    Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_STRING
+                )
+            ).generate()
+
+        assertTrue(
+            generatedCode.contains("static const String logo = 'assets/logo.png';")
+        )
+        assertFalse(generatedCode.contains("class \$AssetsGenAssets"))
+    }
+
+    @Test
+    fun testLegacyStyleWithLeafTypeClassGeneratesTypedWrappers() {
+        val root = AssetNode("Assets", "", MediaType.DIRECTORY, null)
+        val assetsDir = directoryNode("assets", "assets")
+        assetsDir.children.add(fileNode("logo", "assets/logo.png", MediaType.IMAGE))
+        assetsDir.children.add(fileNode("icon", "assets/icon.svg", MediaType.SVG))
+        assetsDir.children.add(fileNode("anim", "assets/anim.lottie", MediaType.LOTTIE))
+        assetsDir.children.add(fileNode("motion", "assets/motion.riv", MediaType.RIVE))
+        assetsDir.children.add(fileNode("readme", "assets/readme.txt", MediaType.UNKNOWN))
+        root.children.add(assetsDir)
+
+        val generatedCode =
+            createGenerator(
+                root,
+                mapOf(
+                    "style" to "legacy",
+                    Constants.KEY_LEAF_TYPE to Constants.LEAF_TYPE_CLASS
+                )
+            ).generate()
+
+        assertTrue(
+            "Should contain AssetGenImage for png",
+            generatedCode.contains(
+                "static const AssetGenImage logo = AssetGenImage('assets/logo.png');"
+            )
+        )
+        assertTrue(
+            "Should contain SvgGenImage for svg",
+            generatedCode.contains(
+                "static const SvgGenImage icon = SvgGenImage('assets/icon.svg');"
+            )
+        )
+        assertTrue(
+            "Should contain LottieGenImage for lottie",
+            generatedCode.contains(
+                "static const LottieGenImage anim = LottieGenImage('assets/anim.lottie');"
+            )
+        )
+        assertTrue(
+            "Should contain RiveGenImage for rive",
+            generatedCode.contains(
+                "static const RiveGenImage motion = RiveGenImage('assets/motion.riv');"
+            )
+        )
+        assertTrue(
+            "Should contain String for unknown type",
+            generatedCode.contains(
+                "static const String readme = 'assets/readme.txt';"
+            )
+        )
+        assertTrue(
+            "Should contain helper class AssetGenImage",
+            generatedCode.contains("class AssetGenImage {")
+        )
+        assertFalse(
+            "Should not contain directory classes",
+            generatedCode.contains("class \$AssetsGen")
+        )
+    }
+
+    private fun createMockConfig(pluginConfig: Map<String, Any> = emptyMap()): ModulePubSpecConfig {
         val mockConfig = Mockito.mock(ModulePubSpecConfig::class.java)
+        Mockito.`when`(mockConfig.map)
+            .thenReturn(
+                mapOf(
+                    Constants.KEY_CONFIGURATION_MAP to pluginConfig
+                )
+            )
 
         return mockConfig
+    }
+
+    private fun createGenerator(root: AssetNode, pluginConfig: Map<String, Any> = emptyMap()): DartClassGenerator {
+        return DartClassGenerator(
+            root,
+            createMockConfig(pluginConfig),
+            hasSvg = false,
+            hasSvgDep = false,
+            hasLottie = false,
+            hasLottieDep = false,
+            hasRive = false,
+            hasRiveDep = false,
+            flutterVersion = null
+        )
+    }
+
+    private fun directoryNode(name: String, path: String): AssetNode {
+        return AssetNode(name, path, MediaType.DIRECTORY, null)
+    }
+
+    private fun fileNode(name: String, path: String, type: MediaType): AssetNode {
+        return AssetNode(name, path, type, null)
     }
 }

@@ -83,11 +83,18 @@ patchPluginXml {
     sinceBuild = properties("pluginSinceBuild")
     untilBuild = properties("pluginUntilBuild")
     
-    // Load plugin description from dedicated file and convert to HTML
-    // This follows JetBrains recommended practice for plugin descriptions
+    // Load plugin description from the dedicated README marker block
     pluginDescription = provider {
-        def descriptionFile = project.file("doc/PLUGIN_DESCRIPTION.md")
-        def descriptionContent = descriptionFile.exists() ? descriptionFile.text : ""
+        def readmeFile = project.file("README.md")
+        def descriptionContent = ""
+
+        if (readmeFile.exists()) {
+            def readmeContent = readmeFile.text
+            def matcher = (readmeContent =~ /(?s)<!-- Plugin description -->(.*?)<!-- Plugin description end -->/)
+            if (matcher.find()) {
+                descriptionContent = matcher.group(1).trim()
+            }
+        }
         
         // Convert to HTML using CommonMark
         def parser = Parser.builder().build()
@@ -96,9 +103,9 @@ patchPluginXml {
         renderer.render(document)
     }
     
-    // Get the latest available change notes from the changelog file
+    // Resolve change notes by current pluginVersion first, then fall back to Unreleased
     changeNotes = provider {
-        changelog.getOrNull("3.0.0")?.toHTML() ?: changelog.getUnreleased().toHTML()
+        changelog.getOrNull(properties("pluginVersion"))?.toHTML() ?: changelog.getUnreleased().toHTML()
     }
 }
 

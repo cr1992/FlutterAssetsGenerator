@@ -1,9 +1,9 @@
-# Flutter Assets Generator 3.0.0 技术方案详述
+# Flutter Assets Generator 3.2.0 技术方案详述
 
-> **文档版本**: `b2b916c` - Rive 支持与子模块优化 (2026-02-11)
-> **最后更新**: 2026-02-11
+> **文档版本**: `3.2.0`
+> **最后更新**: 2026-03-26
 
-本文档详细描述了 Flutter Assets Generator 插件 (v3.1.0) 的技术架构、核心流程与关键实现细节。
+本文档详细描述了 Flutter Assets Generator 插件 (v3.2.0) 的技术架构、核心流程与关键实现细节。
 
 ## 1. 架构概览 (Architecture Overview)
 
@@ -11,7 +11,7 @@
 
 *   **隔离性 (Isolation)**: 多模块/多项目配置完全隔离。
 *   **一致性 (Consistency)**: 优先读取内存中的 Document，确保生成内容与编辑器视图片一致。
-*   **安全性 (Safety)**: 所有写操作均在 `WriteCommandAction` 中执行，并利用 `invokeLater` 避免死锁。
+*   **安全性 (Safety)**: 所有写操作均在 `WriteCommandAction` 中执行；保存监听场景通过 `invokeLater` 推迟后续生成，避免死锁。
 *   **兼容性 (Compatibility)**: 同时支持分层级 (Robust) 和扁平化 (Legacy) 两种生成风格。
 
 ### 1.1 系统架构图
@@ -38,7 +38,7 @@ graph TD
     subgraph Generation_Engine [生成引擎]
         TreeBuilder[AssetTree Construction]
         ClassGen[DartClassGenerator]
-        Formatter[CodeStyleManager]
+        Writer[Minimal EDT Write]
     end
 
     SaveAction --> DocListener
@@ -51,8 +51,8 @@ graph TD
     Cache -->|Config Changed?| Orchestrator
     Orchestrator -->|Check Config| TreeBuilder
     TreeBuilder --> ClassGen
-    ClassGen -->|Dart Code| Formatter
-    Formatter -->|Write Files| Disk[File System]
+    ClassGen -->|Dart Code| Writer
+    Writer -->|Write Files| Disk[File System]
 ```
 
 ## 2. 核心流程详述 (Core Processes)
@@ -81,7 +81,6 @@ sequenceDiagram
         Note right of Gen: Async Execution on EDT
         Gen->>Gen: generateWithConfig()
         Gen->>IDE: Write Generated File
-        Gen->>IDE: Reformat Code
     else No Change
         Cache->>Listener: false
         Listener-->>IDE: Do nothing
@@ -145,6 +144,19 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
 **核心职责**: 从 Module 中解析 `pubspec.yaml` 配置，支持内存读取。
 
 **关键方法**:
+*   **`shouldActivateFor(project: Project)`**:
+    *   **项目级激活**: 不再直接依赖 IDEA 的 Flutter module 识别结果，而是扫描当前工作区是否存在至少一个“合法 Flutter 模块”。
+    *   **合法模块定义**:
+        *   `pubspec.yaml` 位于当前工作区内容目录中。
+        *   路径不在 `.dart_tool`、`build`、`.symlinks`、`.plugin_symlinks`、`ephemeral` 等临时生成目录下。
+        *   `pubspec.yaml` 中包含 `flutter:` 节点，或声明了 Flutter SDK 依赖。
+    *   **缓存策略**: 使用 `CachedValuesManager` 按 Project 维度缓存结果，依赖 `PsiModificationTracker` 和 `VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS` 失效，避免在频繁 `update()` 中重复全量解析。
+*   **`getAssets(project: Project)`**:
+    *   **模块级过滤**: 仅返回真正可配置的 Flutter module 配置，不再把 workspace 根目录、纯 Dart package、临时生成目录当作模块候选。
+    *   **日志语义**:
+        *   `excluded (...)`: 路径命中过滤规则，直接排除。
+        *   `skipped (not flutter or unreadable)`: 存在 `pubspec.yaml`，但不是 Flutter module 或无法解析。
+        *   `accepted`: 确认为合法 Flutter module。
 *   **`getPubSpecConfig(module: Module)`**:
     *   **内存读取优先**:
         ```kotlin
@@ -181,12 +193,10 @@ private val cacheMap = ConcurrentHashMap<String, ModulePubSpecConfig>()
 **关键方法**:
 *   **`generateOne(config: ModulePubSpecConfig)`**:
     *   **依赖注入**: 自动检查并添加 `flutter_svg` / `lottie` 依赖。
-    *   **格式化**:
-        ```kotlin
-        // 必须在 WriteAction 中执行
-        CodeStyleManager.getInstance(project).reformat(dartFile)
-        ```
-        恢复了被移除的自动格式化功能，保证生成的代码符合用户项目的代码风格。
+    *   **最小化写入**:
+        *   后台线程完成资源树构建、依赖判断、Flutter 版本读取与代码生成。
+        *   回到 EDT 后仅执行 `WriteCommandAction + Document.setText + commitDocument`。
+        *   对生成文件跳过额外的 IDE `reformat`，避免在大型 monorepo 中把 EDT 长时间占住。
 
 ### 3.6 `AssetsLineMarkerProvider` (编辑器增强)
 **类路径**: `src/main/java/com/crzsc/plugin/provider/AssetsLineMarkerProvider.kt`
@@ -248,18 +258,37 @@ private val NOTIFICATION_GROUP = NotificationGroup(
 )
 ```
 
+#### 4.2.3 Monorepo 场景下的模块识别
+
+为支持大型 Monorepo，项目树右键 `Setup Current Module` 的显示逻辑被拆成两层：
+
+1.  **项目级**: 当前工作区中是否存在至少一个合法 Flutter module。
+2.  **目录级**: 当前右键目录是否精确等于某个 Flutter module 根目录。
+
+这样可以保证：
+
+*   在 `packages/foo`、`packages/foo/example` 这类真实模块根目录上显示入口。
+*   在 `lib/`、`assets/`、普通实验目录等子目录上隐藏入口。
+*   workspace 根目录即使存在 `pubspec.yaml`，只要不是实际 Flutter module，也不会被识别为可配置目标。
+
 #### 4.2.2 异步文件生成 (Asynchronous Generation)
 **类路径**: `src/main/java/com/crzsc/plugin/utils/FileGenerator.kt`
 
 **问题**: 旧版本在 EDT (UI 线程) 同步执行文件 I/O、Process 执行和大量字符串拼接，导致 IDE 偶发性卡顿。
 
-**解决方案**: 分离计算与写入。
+**解决方案**: 分离计算与写入，并收敛批量生成的并发度。
 1.  **数据准备 (Background)**:
     *   使用 `ProgressManager` + `Task.Backgroundable` 将繁重计算移至后台线程。
     *   包括：`AssetTreeBuilder` (遍历文件)、`FlutterVersionHelper` (执行命令)、`DartClassGenerator` (生成代码)。
 2.  **原子写入 (EDT)**:
-    *   仅当后台计算完成且数据有效时，通过 `invokeLater` + `WriteCommandAction` 回到 UI 线程。
-    *   执行极轻量的文件写入操作 (`Document.setText`)，瞬间完成，用户无感知。
+    *   仅当后台计算完成且数据有效时，通过 `invokeAndWait` + `WriteCommandAction` 回到 UI 线程。
+    *   执行极轻量的文件写入操作 (`Document.setText` + `commitDocument`)，不再对生成文件额外执行 IDE 格式化。
+3.  **批量生成串行化 (Batch Serialization)**:
+    *   `generateAll()` 使用单个后台任务串行处理所有模块，避免每个模块再次扇出独立后台任务。
+    *   Flutter 版本在同一轮批量生成中只做一次慢路径解析，后续模块全部命中缓存。
+4.  **性能结果 (2026-04-21 Monorepo 日志复现)**:
+    *   批量生成总耗时: `23.7s -> 1.512s`，约 `15.67x` 提升，累计耗时下降 `93.6%`。
+    *   单模块平均写入耗时: `1339.88ms -> 7.62ms`，约 `175.72x` 提升，写入耗时下降 `99.4%`。
 
 #### 4.2.3 配置解析优化 (Configuration Optimization)
 **类路径**: `src/main/java/com/crzsc/plugin/listener/PubspecDocumentListener.kt`
@@ -314,7 +343,7 @@ private fun isConfigChanged(old: PubspecConfig, new: PubspecConfig): Boolean {
 *   **非递归扫描**: 默认不递归扫描子目录，除非子目录也在配置中被显式包含。这避免了将未配置的测试资源或临时文件意外生成到索引中。
 
 ### 4.3 智能生成风格 (Robust Style)
-v3.0.0 默认采用 Robust 风格，生成的类结构如下：
+v3.2.0 默认采用 Robust 风格，生成的类结构如下：
 
 ```dart
 class Assets {

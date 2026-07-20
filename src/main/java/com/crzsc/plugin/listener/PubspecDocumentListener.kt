@@ -4,12 +4,15 @@ import com.crzsc.plugin.cache.PubspecConfig
 import com.crzsc.plugin.cache.PubspecConfigCache
 import com.crzsc.plugin.utils.FileGenerator
 import com.crzsc.plugin.utils.FileHelperNew
+import com.crzsc.plugin.utils.SetupConfigurationHelper
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
+import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import kotlin.system.measureTimeMillis
 import org.yaml.snakeyaml.Yaml
 
 /** pubspec.yaml 文档保存监听器 只在保存时检测配置变更并触发生成 */
@@ -18,6 +21,14 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
     companion object {
         private val LOG = Logger.getInstance(PubspecDocumentListener::class.java)
+        private const val TAG = "[FAG-PUBSPEC]"
+
+        internal fun shouldTriggerGeneration(newConfig: PubspecConfig, hasChanged: Boolean): Boolean {
+            return hasChanged &&
+                    newConfig.hasPluginConfig &&
+                    newConfig.pluginEnabled &&
+                    newConfig.autoDetection
+        }
     }
 
     override fun beforeDocumentSaving(document: Document) {
@@ -34,84 +45,94 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
 
     private fun handlePubspecSave(pubspecFile: VirtualFile, document: Document) {
         LOG.info(
-            "[FlutterAssetsGenerator #${project.name}] pubspec.yaml saved: ${pubspecFile.path}"
+            "$TAG project=${project.name} saved=${pubspecFile.path}"
         )
 
-        // 获取项目中所有 Flutter 模块的配置
-        val assets = FileHelperNew.getAssets(project)
-
-        for (config in assets) {
-            // 检查是否是当前保存的 pubspec.yaml
-            if (config.pubRoot.pubspec != pubspecFile) {
-                continue
-            }
-
-            // 检查是否启用了自动检测
-            if (!FileHelperNew.isAutoDetectionEnable(config)) {
-                LOG.info(
-                    "[FlutterAssetsGenerator #${project.name}/${config.module.name}] auto_detection disabled, skipping"
-                )
-                continue
-            }
-
-            val modulePath = config.pubRoot.pubspec.parent.path
-
-            // 使用 invokeLater 延迟读取配置和生成,确保读取到保存后的最新内容
-            ApplicationManager.getApplication().invokeLater {
-                if (!project.isDisposed) {
-                    try {
-                        val content = document.text
-                        val yaml = Yaml()
-                        val data = yaml.load<Map<*, *>>(content) ?: return@invokeLater
-
-                        // 在这里读取配置,确保文件已经保存到磁盘
-                        // 使用优化后的 fromMap 避免重复解析
-                        val newConfig = PubspecConfig.fromMap(data)
-
-                        // 检查配置是否改变
-                        val hasChanged =
-                            PubspecConfigCache.hasChanged(project, modulePath, newConfig)
-
-                        if (hasChanged) {
-                            LOG.info(
-                                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config changed, triggering generation"
-                            )
-
-                            // 更新缓存
-                            PubspecConfigCache.put(project, modulePath, newConfig)
-
-                            // 使用最新的配置重新加载 ModulePubSpecConfig 对象
-                            // 使用 optimize 的 getPubSpecConfigFromMap 避免再次解析 YAML
-                            val updatedConfig =
-                                FileHelperNew.getPubSpecConfigFromMap(
-                                    config.module,
-                                    config.pubRoot.pubspec,
-                                    data as Map<String, Any>
-                                )
-
-                            if (updatedConfig != null) {
-                                // 触发生成
-                                fileGenerator.generateOne(updatedConfig)
-                            } else {
-                                LOG.error(
-                                    "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Failed to reload config for generation"
-                                )
-                            }
-                        } else {
-                            LOG.info(
-                                "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Config unchanged, skipping generation"
-                            )
-                        }
-                    } catch (e: Exception) {
-                        LOG.error(
-                            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Processing failed",
-                            e
-                        )
-                    }
+        val module = ModuleUtilCore.findModuleForFile(pubspecFile, project) ?: return
+        val dataRef = arrayOfNulls<Map<String, Any>>(1)
+        val parseElapsedMs =
+            measureTimeMillis {
+                try {
+                    val content = document.text
+                    val yaml = Yaml()
+                    @Suppress("UNCHECKED_CAST")
+                    dataRef[0] = yaml.load<Map<String, Any>>(content)
+                } catch (e: Exception) {
+                    LOG.error("$TAG project=${project.name} failed-to-parse saved=${pubspecFile.path}", e)
                 }
             }
+        val data = dataRef[0] ?: return
+        val config = FileHelperNew.getPubSpecConfigFromMap(module, pubspecFile, data) ?: return
+        val modulePath = config.pubRoot.pubspec.parent.path
+        val newConfig = PubspecConfig.fromMap(data)
 
+        if (SetupConfigurationHelper.consumeProgrammaticPubspecUpdate(pubspecFile.path)) {
+            PubspecConfigCache.put(project, modulePath, newConfig)
+            LOG.info(
+                "$TAG module=${config.module.name} parseElapsedMs=$parseElapsedMs cached=programmatic-setup"
+            )
             return
+        }
+
+        // 使用 invokeLater 延迟读取配置和生成,确保读取到保存后的最新内容
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) {
+                try {
+                    val hasChanged = PubspecConfigCache.hasChanged(project, modulePath, newConfig)
+                    LOG.info(
+                        "$TAG module=${config.module.name} parseElapsedMs=$parseElapsedMs assetPaths=${newConfig.assetPaths} hasPluginConfig=${newConfig.hasPluginConfig} pluginEnabled=${newConfig.pluginEnabled} autoDetection=${newConfig.autoDetection} hasChanged=$hasChanged"
+                    )
+
+                    if (!hasChanged) {
+                        LOG.info(
+                            "$TAG module=${config.module.name} config-unchanged skip-generation"
+                        )
+                        return@invokeLater
+                    }
+
+                    PubspecConfigCache.put(project, modulePath, newConfig)
+
+                    if (!shouldTriggerGeneration(newConfig, hasChanged = true)) {
+                        if (newConfig.hasPluginConfig && !newConfig.pluginEnabled) {
+                            LOG.info(
+                                "$TAG module=${config.module.name} config-disabled cleanup-generated-file"
+                            )
+                            fileGenerator.deleteGeneratedFile(config)
+                        }
+                        LOG.info(
+                            "$TAG module=${config.module.name} skip-generation reason=config-disabled-or-missing"
+                        )
+                        return@invokeLater
+                    }
+
+                    LOG.info(
+                        "$TAG module=${config.module.name} config-changed trigger-generation"
+                    )
+
+                    val updatedConfig =
+                        FileHelperNew.getPubSpecConfigFromMap(
+                            config.module,
+                            config.pubRoot.pubspec,
+                            data
+                        )
+
+                    if (updatedConfig != null) {
+                        LOG.info(
+                            "$TAG module=${config.module.name} reloaded-assetVFiles=${updatedConfig.assetVFiles.map { it.path }}"
+                        )
+                        fileGenerator.generateOne(updatedConfig)
+                    } else {
+                        LOG.error(
+                            "$TAG module=${config.module.name} failed-to-reload-config-for-generation"
+                        )
+                    }
+                } catch (e: Exception) {
+                    LOG.error(
+                        "$TAG module=${config.module.name} processing-failed",
+                        e
+                    )
+                }
+            }
         }
     }
 }

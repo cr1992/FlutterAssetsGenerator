@@ -8,6 +8,7 @@ import io.flutter.sdk.FlutterSdk
 import java.io.File
 import java.io.FileInputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.FutureTask
 import org.yaml.snakeyaml.Yaml
 
 /** Flutter 版本检测工具 */
@@ -16,6 +17,8 @@ object FlutterVersionHelper {
 
     // 版本缓存: Key = SDK路径, Value = 版本号
     private val versionCache = ConcurrentHashMap<String, SemanticVersion>()
+    // 进行中的版本探测，避免多模块并发时重复执行慢路径
+    private val versionTasks = ConcurrentHashMap<String, FutureTask<SemanticVersion?>>()
 
     /**
      * 从 pubspec.yaml 或 Flutter SDK 获取 Flutter 版本
@@ -47,22 +50,52 @@ object FlutterVersionHelper {
             return it
         }
 
-        // 2. 尝试从 SDK 的 version 文件读取 (最快)
-        getFlutterVersionFromFile(sdkPath)?.let { version ->
-            versionCache[sdkPath] = version
+        val newTask =
+            FutureTask<SemanticVersion?> {
+                // 2. 尝试从 SDK 的 version 文件读取 (最快)
+                getFlutterVersionFromFile(sdkPath)?.let { version ->
+                    versionCache[sdkPath] = version
+                    LOG.info(
+                        "[FlutterAssetsGenerator #FlutterVersionHelper] Read version from file: $version"
+                    )
+                    return@FutureTask version
+                }
+
+                // 3. 降级到执行命令 (最慢,但最可靠)
+                getFlutterVersionFromCommand(project, sdkPath)?.let { version ->
+                    versionCache[sdkPath] = version
+                    return@FutureTask version
+                }
+
+                null
+            }
+
+        val task = versionTasks.putIfAbsent(sdkPath, newTask) ?: newTask
+        val isOwner = task === newTask
+        if (isOwner) {
             LOG.info(
-                "[FlutterAssetsGenerator #FlutterVersionHelper] Read version from file: $version"
+                "[FlutterAssetsGenerator #FlutterVersionHelper] Starting version detection for $sdkPath"
             )
-            return version
+            task.run()
+        } else {
+            LOG.info(
+                "[FlutterAssetsGenerator #FlutterVersionHelper] Waiting for in-flight version detection for $sdkPath"
+            )
         }
 
-        // 3. 降级到执行命令 (最慢,但最可靠)
-        getFlutterVersionFromCommand(project, sdkPath)?.let { version ->
-            versionCache[sdkPath] = version
-            return version
+        return try {
+            task.get()
+        } catch (e: Exception) {
+            LOG.warn(
+                "[FlutterAssetsGenerator #FlutterVersionHelper] Failed to resolve Flutter version for $sdkPath",
+                e
+            )
+            null
+        } finally {
+            if (isOwner) {
+                versionTasks.remove(sdkPath, task)
+            }
         }
-
-        return null
     }
 
     /** 从 Flutter SDK 的 version 文件读取版本 文件位置: ${sdkPath}/version */

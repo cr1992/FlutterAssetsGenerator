@@ -1,6 +1,45 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 [//]: # (# FlutterAssetsGenerator Changelog)
+## [3.3.0]
+
+### Added / 新增
+- **`leaf_type` supports both styles**: `leaf_type` is now independent of `style`. Legacy mode can use `leaf_type: class` to get typed wrappers (`AssetGenImage`, `SvgGenImage`, etc.) with flat access paths. Default: `class` for robust, `string` for legacy.
+  - **`leaf_type` 支持所有风格**: `leaf_type` 不再绑定 `style`。Legacy 模式可通过 `leaf_type: class` 获得类型安全的包装类，同时保持扁平访问路径。默认值：robust 为 `class`，legacy 为 `string`。
+- **Right-click module setup**: Right-click a Flutter module root in Project View to set up that module individually.
+  - **右键模块配置**: 在项目树中右键 Flutter 模块根目录即可单独配置该模块。
+- **`enable: false` cleanup**: Disabling a module now removes its generated Dart file.
+  - **禁用即清理**: 设置 `enable: false` 后自动删除已生成的 Dart 文件。
+
+### Improved / 优化
+- **Monorepo performance**: Batch generation up to ~15x faster (async flow, single Flutter version resolve, skip reformat).
+  - **Monorepo 性能**: 批量生成提速约 15 倍（异步流程、单次 Flutter 版本解析、跳过格式化）。
+- **Smarter module discovery**: Filters out `ephemeral`, `.plugin_symlinks` etc.; only real Flutter modules are configurable.
+  - **更精准的模块发现**: 过滤 `ephemeral`、`.plugin_symlinks` 等目录，仅识别真实 Flutter 模块。
+- **Setup defaults**: `package_parameter_enabled` now defaults based on module type (app → `false`, package → `true`).
+  - **配置默认值**: `package_parameter_enabled` 根据模块类型自动设定（app → `false`，package → `true`）。
+
+## [3.2.0]
+### Added / 新增
+- **Enable Config**: Added `enable` to explicitly control whether a module participates in watching and generation.
+  - **启用开关**: 新增 `enable` 配置，用于显式控制模块是否参与监听和生成。
+- **Leaf Type Config**: Added `leaf_type` option independent of generation style. Controls whether assets use typed wrappers (`class`) or raw `String` paths (`string`).
+  - **引用类型配置**: 新增 `leaf_type` 配置，独立于生成风格，控制资源引用使用包装类型（`class`）还是原始 `String` 路径（`string`）。
+
+### Changed / 变更
+- **YAML Source of Truth**: 3.x now treats `pubspec.yaml` as the source of truth. Modules without a `flutter_assets_generator` block are no longer watched or generated automatically.
+  - **YAML 单一配置源**: 3.x 以后统一以 `pubspec.yaml` 为准。未配置 `flutter_assets_generator` 的模块不再自动监听或生成。
+
+### Fixed / 修复
+- **Name Style Handling**: Fixed `name_style` handling so generated identifiers now consistently respect `camel` and `snake`.
+  - **命名风格处理**: 修复 `name_style` 配置未被完整应用的问题，确保生成标识符稳定遵循 `camel` 和 `snake`。
+- **Legacy Naming Compatibility**: Restored legacy flat naming behavior for numeric assets such as `assets/images/0.png -> Assets.images0`.
+  - **Legacy 命名兼容**: 恢复旧版扁平命名在数字资源下的兼容行为，例如 `assets/images/0.png -> Assets.images0`。
+- **Robust Directory Naming**: Directory helper classes now use the full physical asset path to avoid collisions when different roots share the same folder name or tree shape.
+  - **Robust 目录命名**: 目录内部类改为基于完整物理路径生成，修复不同资源根目录同名或同结构目录发生冲突的问题。
+- **Robust Root Flattening**: Root flattening now only applies to a single `assets/` root so intermediate directories remain stable in deep paths.
+  - **Robust 根目录扁平化**: 根目录扁平化现在仅对单一 `assets/` 根生效，避免深层路径丢失中间目录。
+
 ## [3.1.0]
 ### Added / 新增
 - **Legacy Naming**: Added `named_with_parent` option for `legacy` style to restore old directory-prefixed variable naming (e.g., `imagesBtnLogo`).

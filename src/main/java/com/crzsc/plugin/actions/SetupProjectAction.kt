@@ -1,21 +1,39 @@
 package com.crzsc.plugin.actions
 
 import com.crzsc.plugin.utils.FileHelperNew
+import com.crzsc.plugin.utils.FileGenerator
 import com.crzsc.plugin.utils.ModulePubSpecConfig
 import com.crzsc.plugin.utils.PluginUtils.showNotify
+import com.crzsc.plugin.utils.SetupConfigurationHelper
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
-import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiManager
-import com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.yaml.YAMLElementGenerator
-import org.jetbrains.yaml.psi.YAMLFile
-import org.jetbrains.yaml.psi.YAMLMapping
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
+import kotlin.system.measureTimeMillis
 
 /** 一键配置项目 Action 自动在 pubspec.yaml 中添加 flutter_assets_generator 配置块 */
 class SetupProjectAction : AnAction() {
+    companion object {
+        private val LOG = Logger.getInstance(SetupProjectAction::class.java)
+    }
+
+    private data class SetupModuleTiming(
+        val config: ModulePubSpecConfig,
+        val added: Boolean,
+        val elapsedMs: Long
+    )
+
+    private data class GenerationReadiness(
+        val generatable: List<ModulePubSpecConfig>,
+        val missingPluginConfig: List<ModulePubSpecConfig>,
+        val disabled: List<ModulePubSpecConfig>,
+        val noResolvableAssets: List<ModulePubSpecConfig>
+    )
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(PlatformDataKeys.PROJECT)
@@ -24,82 +42,158 @@ class SetupProjectAction : AnAction() {
             return
         }
 
-        // 获取所有 Flutter 模块的 pubspec.yaml
-        val assets = FileHelperNew.getAssets(project)
-        if (assets.isEmpty()) {
-            showNotify("No Flutter modules found in project")
-            return
-        }
+        ProgressManager.getInstance().run(
+            object : Task.Backgroundable(project, "Setting up Flutter Assets Generator", false) {
+                override fun run(indicator: ProgressIndicator) {
+                    indicator.text = "Scanning Flutter modules"
+                    lateinit var assets: List<ModulePubSpecConfig>
+                    val scanElapsedMs =
+                        measureTimeMillis {
+                            assets =
+                                ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                                    FileHelperNew.getAssets(project)
+                                }
+                        }
 
-        var configuredCount = 0
-        for (config in assets) {
-            if (addDefaultConfiguration(project, config)) {
-                configuredCount++
-            }
-        }
+                    LOG.info(
+                        "[FlutterAssetsGenerator #SetupProject] project=${project.name} discoveredModules=${assets.size} scanElapsedMs=$scanElapsedMs"
+                    )
 
-        if (configuredCount > 0) {
-            showNotify("Successfully configured $configuredCount module(s) with default settings")
-        } else {
-            showNotify("All modules already have flutter_assets_generator configuration")
-        }
-    }
+                    if (assets.isEmpty()) {
+                        showNotify("No Flutter modules found in project")
+                        return
+                    }
 
-    /**
-     * 向 pubspec.yaml 添加默认配置
-     * @return true 如果成功添加配置，false 如果配置已存在
-     */
-    private fun addDefaultConfiguration(project: Project, config: ModulePubSpecConfig): Boolean {
-        val pubspecFile = config.pubRoot.pubspec
-        val yamlFile =
-            PsiManager.getInstance(project).findFile(pubspecFile) as? YAMLFile ?: return false
-        val yamlMapping =
-            yamlFile.documents.firstOrNull()?.topLevelValue as? YAMLMapping ?: return false
+                    var configuredCount = 0
+                    var setupModuleTimings = emptyList<SetupModuleTiming>()
+                    val setupElapsedMs =
+                        measureTimeMillis {
+                            val timings = mutableListOf<SetupModuleTiming>()
+                            ApplicationManager.getApplication().invokeAndWait {
+                                assets.forEachIndexed { index, config ->
+                                    indicator.checkCanceled()
+                                    indicator.text =
+                                        "Configuring module ${index + 1}/${assets.size}: ${config.module.name}"
+                                    var added = false
+                                    val moduleElapsedMs =
+                                        measureTimeMillis {
+                                            added =
+                                                SetupConfigurationHelper.addDefaultConfiguration(
+                                                    project,
+                                                    config
+                                                )
+                                        }
+                                    if (added) {
+                                        configuredCount++
+                                    }
+                                    timings.add(
+                                        SetupModuleTiming(
+                                            config = config,
+                                            added = added,
+                                            elapsedMs = moduleElapsedMs
+                                        )
+                                    )
+                                }
+                            }
+                            setupModuleTimings = timings.toList()
+                        }
 
-        // 检查是否已存在配置
-        if (yamlMapping.getKeyValueByKey("flutter_assets_generator") != null) {
-            return false
-        }
+                    setupModuleTimings.forEach { timing ->
+                        LOG.info(
+                            "[FlutterAssetsGenerator #SetupProject] project=${project.name} module=${timing.config.module.name} pubspec=${timing.config.pubRoot.pubspec.path} setupModuleElapsedMs=${timing.elapsedMs} result=${if (timing.added) "added" else "skipped-existing"}"
+                        )
+                    }
 
-        // 添加默认配置
-        WriteCommandAction.runWriteCommandAction(project) {
-            val generator = YAMLElementGenerator.getInstance(project)
+                    LOG.info(
+                        "[FlutterAssetsGenerator #SetupProject] project=${project.name} configuredCount=$configuredCount skippedCount=${assets.size - configuredCount} totalModules=${assets.size} setupElapsedMs=$setupElapsedMs avgSetupModuleElapsedMs=${averageElapsedMs(setupModuleTimings)}"
+                    )
 
-            // 创建配置内容
-            val configContent =
-                """
-                flutter_assets_generator:
-                  output_dir: generated/
-                  output_filename: assets
-                  class_name: Assets
-                  auto_detection: true
-                  # Automatically add missing dependencies (rive, flutter_svg, lottie) default: true
-                  auto_add_dependencies: true
-                  # Options: robust (default), legacy (old style)
-                  style: robust
-                  package_parameter_enabled: false
-                  named_with_parent: true
-                  path_ignore: []
-            """.trimIndent()
+                    indicator.text = "Refreshing module configs"
+                    lateinit var refreshedAssets: List<ModulePubSpecConfig>
+                    val refreshElapsedMs =
+                        measureTimeMillis {
+                            refreshedAssets =
+                                ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                                    FileHelperNew.getAssets(project)
+                                }
+                        }
+                    val readiness: GenerationReadiness
+                    val readinessElapsedMs =
+                        measureTimeMillis {
+                            readiness = analyzeGenerationReadiness(project, refreshedAssets)
+                        }
+                    LOG.info(
+                        "[FlutterAssetsGenerator #SetupProject] project=${project.name} refreshedModules=${refreshedAssets.size} refreshElapsedMs=$refreshElapsedMs readinessElapsedMs=$readinessElapsedMs generationReadiness generatable=${readiness.generatable.size} missingPluginConfig=${readiness.missingPluginConfig.size} disabled=${readiness.disabled.size} noResolvableAssets=${readiness.noResolvableAssets.size}"
+                    )
+                    logModulePaths("generatable", readiness.generatable)
+                    logModulePaths("missingPluginConfig", readiness.missingPluginConfig)
+                    logModulePaths("disabled", readiness.disabled)
+                    logModulePaths("noResolvableAssets", readiness.noResolvableAssets)
 
-            try {
-                // 解析配置为 YAML 结构
-                val dummyYaml = generator.createDummyYamlWithText(configContent)
-                val configMapping =
-                    PsiTreeUtil.collectElementsOfType(dummyYaml, YAMLMapping::class.java)
-                        .firstOrNull()
-
-                if (configMapping != null) {
-                    val configKV = configMapping.keyValues.firstOrNull()
-                    if (configKV != null) {
-                        yamlMapping.putKeyValue(configKV)
+                    if (configuredCount > 0) {
+                        showNotify("Successfully configured $configuredCount module(s) with default settings")
+                    } else {
+                        showNotify("All modules already have flutter_assets_generator configuration")
                     }
                 }
-            } catch (e: Exception) {
-                showNotify("Failed to add configuration: ${e.message}")
+            }
+        )
+    }
+
+    private fun analyzeGenerationReadiness(
+        project: com.intellij.openapi.project.Project,
+        configs: List<ModulePubSpecConfig>
+    ): GenerationReadiness {
+        if (configs.isEmpty()) {
+            return GenerationReadiness(
+                generatable = emptyList(),
+                missingPluginConfig = emptyList(),
+                disabled = emptyList(),
+                noResolvableAssets = emptyList()
+            )
+        }
+        val fileGenerator = FileGenerator(project = project)
+        val generatable = mutableListOf<ModulePubSpecConfig>()
+        val missingPluginConfig = mutableListOf<ModulePubSpecConfig>()
+        val disabled = mutableListOf<ModulePubSpecConfig>()
+        val noResolvableAssets = mutableListOf<ModulePubSpecConfig>()
+
+        configs.forEach { config ->
+            when {
+                !FileHelperNew.hasPluginConfig(config) -> missingPluginConfig.add(config)
+                !FileHelperNew.isPluginEnabled(config) -> disabled.add(config)
+                config.assetVFiles.isEmpty() -> noResolvableAssets.add(config)
+                fileGenerator.filterEnabledConfigs(listOf(config)).isNotEmpty() -> generatable.add(config)
+                else -> noResolvableAssets.add(config)
             }
         }
 
-        return true
+        return GenerationReadiness(
+            generatable = generatable,
+            missingPluginConfig = missingPluginConfig,
+            disabled = disabled,
+            noResolvableAssets = noResolvableAssets
+        )
+    }
+
+    private fun averageElapsedMs(timings: List<SetupModuleTiming>): Long {
+        if (timings.isEmpty()) {
+            return 0L
+        }
+        val totalElapsedMs = timings.fold(0L) { acc, timing -> acc + timing.elapsedMs }
+        return totalElapsedMs / timings.size
+    }
+
+    private fun logModulePaths(label: String, configs: List<ModulePubSpecConfig>) {
+        if (configs.isEmpty()) {
+            return
+        }
+        val modules =
+            configs.joinToString(separator = "; ") {
+                "${it.module.name}:${it.pubRoot.pubspec.path}"
+            }
+        LOG.info(
+            "[FlutterAssetsGenerator #SetupProject] $label modules=$modules"
+        )
     }
 }
