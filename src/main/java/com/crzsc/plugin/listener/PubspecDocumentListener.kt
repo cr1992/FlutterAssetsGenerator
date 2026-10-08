@@ -8,6 +8,7 @@ import com.crzsc.plugin.utils.SetupConfigurationHelper
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
@@ -15,7 +16,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import kotlin.system.measureTimeMillis
 import org.yaml.snakeyaml.Yaml
 
-/** pubspec.yaml 文档保存监听器 只在保存时检测配置变更并触发生成 */
+/** pubspec.yaml 文档保存监听器 只在保存时检测配置变更并触发生成. 通过 plugin.xml projectListeners 注册 */
 class PubspecDocumentListener(private val project: Project) : FileDocumentManagerListener {
     private val fileGenerator = FileGenerator(project)
 
@@ -32,8 +33,7 @@ class PubspecDocumentListener(private val project: Project) : FileDocumentManage
     }
 
     override fun beforeDocumentSaving(document: Document) {
-        val file =
-            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document)
+        val file = FileDocumentManager.getInstance().getFile(document)
 
         // 只处理 pubspec.yaml 文件
         if (file?.name != "pubspec.yaml") {

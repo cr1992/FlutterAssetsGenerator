@@ -14,8 +14,8 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys
 class GenerateDirAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        val project = e.getData(PlatformDataKeys.PROJECT)
-        if (FileHelperNew.shouldActivateFor(project!!)) {
+        val project = e.getData(PlatformDataKeys.PROJECT) ?: return
+        if (FileHelperNew.shouldActivateFor(project)) {
             val file = e.getData(PlatformDataKeys.VIRTUAL_FILE)
             if (file != null) {
                 FileGenerator(project).buildYaml(file)

@@ -1,6 +1,7 @@
 package com.crzsc.plugin.provider
 
 import com.crzsc.plugin.utils.FileHelperNew
+import com.crzsc.plugin.utils.ModulePubSpecConfig
 import com.crzsc.plugin.utils.PluginUtils.openFile
 import com.crzsc.plugin.utils.isSvgExtension
 import com.intellij.codeInsight.daemon.LineMarkerInfo
@@ -23,53 +24,49 @@ import javax.swing.ImageIcon
 class AssetsLineMarkerProvider : LineMarkerProvider {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        val elementType = (element as? LeafPsiElement?)?.elementType?.toString()
-        if (elementType == "REGULAR_STRING_PART") {
-            // 这里会被多次调用 尽量减少调用次数
-            var assetName: String? = null
-
-            val vFile = element.containingFile.virtualFile
-            if (vFile != null) {
-                val bestConfig =
-                    FileHelperNew.getAssets(element.project)
-                        .filter { vFile.path.startsWith(it.pubRoot.path) }
-                        .maxByOrNull { it.pubRoot.path.length }
-
-                if (bestConfig != null) {
-                    assetName = FileHelperNew.getGeneratedFileName(bestConfig)
-                }
-            }
-
-            // 检查当前文件名是否匹配配置的生成文件名
-            // getGeneratedFileName 返回不带扩展名的文件名,需要添加 .dart 后缀
-            val filenameCorrect =
-                assetName != null && element.containingFile.name.equals("$assetName.dart", true)
-            if (filenameCorrect) {
-                //                println("filenameCorrect showMakeByType : $element")
-                return showMakeByType(element)
-            }
+        // 这里会对每个 Dart 文件里的每个字符串片段调用, 必须先做零成本的过滤, 再去查模块配置
+        val elementType = (element as? LeafPsiElement)?.elementType?.toString()
+        if (elementType != "REGULAR_STRING_PART") {
+            return null
         }
-        return null
+        val containingFile = element.containingFile ?: return null
+        val vFile = containingFile.virtualFile ?: return null
+        if (!containingFile.name.endsWith(".dart", ignoreCase = true)) {
+            return null
+        }
+
+        // 项目级缓存, 不会每个字符串都扫描 FilenameIndex
+        val bestConfig =
+            FileHelperNew.getCachedAssets(element.project)
+                .filter { vFile.path.startsWith("${it.pubRoot.path}/") }
+                .maxByOrNull { it.pubRoot.path.length }
+                ?: return null
+
+        val expectedName = "${FileHelperNew.getGeneratedFileName(bestConfig)}.dart"
+        if (!containingFile.name.equals(expectedName, ignoreCase = true)) {
+            return null
+        }
+        return showMakeByType(element, bestConfig)
     }
 
-    private fun showMakeByType(element: PsiElement): LineMarkerInfo<*>? {
+    private fun showMakeByType(element: PsiElement, config: ModulePubSpecConfig): LineMarkerInfo<*>? {
         val assetsPath = element.text
         val anchor = PsiTreeUtil.getDeepestFirst(element)
-        // 先用默认的path找文件
-        var filePath = element.project.basePath + "/" + element.text
 
-        var vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
-        if (vFile == null) {
-            // 如果没找到，尝试根据当前文件向上查找
-            var file = element.containingFile.viewProvider.virtualFile
-            while (file.name != "lib" && file.parent != null) {
-                file = file.parent
+        // package_parameter_enabled 时字符串是 packages/<pkg>/<path>, 去掉前缀后再定位文件
+        val packageName = config.map["name"] as? String
+        val relativePath =
+            if (packageName != null && assetsPath.startsWith("packages/$packageName/")) {
+                assetsPath.removePrefix("packages/$packageName/")
+            } else {
+                assetsPath
             }
-            filePath = file.parent.path + "/" + element.text
 
-            vFile = LocalFileSystem.getInstance().findFileByPath(filePath)
+        // 优先相对于资源所属的 pub 包根目录查找, 找不到再退回项目根目录
+        var vFile = config.pubRoot.root.findFileByRelativePath(relativePath)
+        if (vFile == null) {
+            vFile = LocalFileSystem.getInstance().findFileByPath(element.project.basePath + "/" + relativePath)
         }
-        //        println("showMakeByType assetsPath $assetsPath")
         if (vFile != null) {
             return when {
                 assetsPath.isSvgExtension -> showSvgMark(element, anchor, vFile)

@@ -9,16 +9,14 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import java.io.File
 import kotlin.system.measureTimeMillis
-import org.jetbrains.kotlin.idea.core.util.toPsiFile
-import org.jetbrains.kotlin.idea.util.findModule
 import org.jetbrains.yaml.YAMLElementGenerator
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLMapping
@@ -41,10 +39,14 @@ class FileGenerator(private val project: Project) {
                         lateinit var allConfigs: List<ModulePubSpecConfig>
                         val scanElapsedMs =
                             measureTimeMillis {
+                                // 后台线程: 等索引就绪再在读锁内扫描, 不用已弃用的 runReadActionInSmartMode
                                 allConfigs =
-                                    ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                                    ReadAction.nonBlocking<List<ModulePubSpecConfig>> {
                                         FileHelperNew.getAssets(project)
                                     }
+                                        .inSmartMode(project)
+                                        .expireWith(project)
+                                        .executeSynchronously()
                             }
 
                         val assets = filterEnabledConfigs(allConfigs)
@@ -181,6 +183,10 @@ class FileGenerator(private val project: Project) {
         configs.filter(::shouldDeleteGeneratedFile).forEach(::deleteGeneratedFile)
     }
 
+    /**
+     * 删除已生成的 Dart 文件. VirtualFile.delete 必须在 EDT 的 write action 中执行,
+     * 调用方可能来自后台线程 (批量生成 / VFS 监听) 或 EDT (pubspec 保存监听), 这里统一调度.
+     */
     internal fun deleteGeneratedFile(config: ModulePubSpecConfig): Boolean {
         val generatedFile = FileHelperNew.findGeneratedFile(config)
         if (generatedFile == null || !generatedFile.exists()) {
@@ -190,12 +196,37 @@ class FileGenerator(private val project: Project) {
             return false
         }
 
-        generatedFile.delete(this)
-        LOG.info(
-            "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Deleted generated file: ${generatedFile.path}"
-        )
-        showNotify("${config.module.name} : generated assets removed because enable=false")
-        return true
+        var deleted = false
+        val application = ApplicationManager.getApplication()
+        val deleteTask = Runnable {
+            if (project.isDisposed || !generatedFile.isValid) {
+                return@Runnable
+            }
+            WriteCommandAction.runWriteCommandAction(project) {
+                try {
+                    generatedFile.delete(this)
+                    deleted = true
+                    LOG.info(
+                        "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Deleted generated file: ${generatedFile.path}"
+                    )
+                    showNotify("${config.module.name} : generated assets removed because enable=false")
+                } catch (e: Exception) {
+                    LOG.warn(
+                        "[FlutterAssetsGenerator #${project.name}/${config.module.name}] Failed to delete ${generatedFile.path}",
+                        e
+                    )
+                }
+            }
+        }
+        if (application.isDispatchThread) {
+            deleteTask.run()
+        } else if (application.isReadAccessAllowed) {
+            // 持有读锁时 invokeAndWait 会死锁, 退化为异步
+            application.invokeLater(deleteTask)
+        } else {
+            application.invokeAndWait(deleteTask)
+        }
+        return deleted
     }
 
     private data class GenerationData(
@@ -314,7 +345,7 @@ class FileGenerator(private val project: Project) {
         var assetTreeElapsedMs = 0L
         var dependencyCheckElapsedMs = 0L
         val snapshot =
-            ReadAction.compute<ReadSnapshot, RuntimeException> {
+            ReadAction.nonBlocking<ReadSnapshot> {
                 val ignorePath = FileHelperNew.getPathIgnore(config)
                 val moduleRootPath = config.pubRoot.path
 
@@ -352,6 +383,8 @@ class FileGenerator(private val project: Project) {
 
                 result
             }
+                .expireWith(project)
+                .executeSynchronously()
 
         val pubspecFile = config.pubRoot.pubspec
         val needsFlutterVersion =
@@ -392,6 +425,11 @@ class FileGenerator(private val project: Project) {
                 }
             }
 
+        // flutter_svg 模板按项目实际依赖的版本选择; 刚要自动添加的依赖也算
+        val flutterSvgVersion =
+            depsToAdd["flutter_svg"]
+                ?: ((config.map["dependencies"] as? Map<*, *>)?.get("flutter_svg") as? String)
+
         lateinit var content: String
         val codegenElapsedMs =
             measureTimeMillis {
@@ -405,7 +443,8 @@ class FileGenerator(private val project: Project) {
                         hasLottieDep,
                         snapshot.hasRive,
                         hasRiveDep,
-                        flutterVersion
+                        flutterVersion,
+                        flutterSvgVersion
                     )
                         .generate()
             }
@@ -485,84 +524,88 @@ class FileGenerator(private val project: Project) {
 
     /** 将所选择目录及子目录添加到yaml配置 */
     fun buildYaml(file: VirtualFile) {
+        if (DumbService.isDumb(project)) {
+            showNotify("Indexing in progress, please retry after indexing finishes")
+            return
+        }
         saveChanges()
         val modules = FileHelperNew.getAssets(project)
         val module =
-            modules.filter { file.path.startsWith(it.pubRoot.path) }.maxByOrNull {
-                it.pubRoot.path.length
-            }
+            modules.filter { file.path.startsWith("${it.pubRoot.path}/") || file.path == it.pubRoot.path }
+                .maxByOrNull { it.pubRoot.path.length }
 
-        if (module != null) {
-            val paths = mutableListOf<String>()
-            val rootPath = "${module.pubRoot.path}/"
-            if (file.isDirectory) {
-                traversalDir(file, rootPath, paths)
-            } else {
-                paths.add(file.path.removePrefix(rootPath))
-            }
-            val moduleAssets = FileHelperNew.tryGetAssetsList(module.map)
-            if (moduleAssets != null) {
-                val moduleDir = file.findModule(project)?.guessModuleDir()
-                moduleAssets.removeIf {
-                    var parentPath = moduleDir?.path
-                    var path = it as String
-                    path = path.removeSuffix(File.separator)
-                    if (path.contains(File.separator)) {
-                        val subIndex = path.lastIndexOf(File.separator)
-                        parentPath = "$parentPath${File.separator}${path.take(subIndex + 1)}"
-                        path = path.substring(subIndex + 1, path.length)
-                    }
-                    val asset = File(parentPath, path)
-                    !asset.exists()
-                }
-                paths.removeIf { moduleAssets.contains(it) }
-            }
-            val yamlFile = module.pubRoot.pubspec.toPsiFile(project) as? YAMLFile
-            yamlFile?.let {
-                val psiElement =
-                    yamlFile.node
-                        .getChildren(null)
-                        .firstOrNull()
-                        ?.psi
-                        ?.children
-                        ?.firstOrNull()
-                        ?.children
-                        ?.firstOrNull { it.text.startsWith("flutter:") }
-                if (psiElement != null) {
-                    val yamlMapping = psiElement.children.first() as YAMLMapping
-                    WriteCommandAction.runWriteCommandAction(project) {
-                        var assetsValue =
-                            yamlMapping.keyValues.firstOrNull { it.keyText == "assets" }
-                        val stringBuilder = StringBuilder()
-                        moduleAssets?.forEach { stringBuilder.append("    - $it\n") }
-                        paths.forEach { stringBuilder.append("    - $it\n") }
-                        stringBuilder.removeSuffix("\n")
-                        if (assetsValue == null) {
-                            assetsValue =
-                                YAMLElementGenerator.getInstance(project)
-                                    .createYamlKeyValue("assets", stringBuilder.toString())
-                            yamlMapping.putKeyValue(assetsValue)
-                        } else {
-                            val yamlValue =
-                                PsiTreeUtil.collectElementsOfType(
-                                    YAMLElementGenerator.getInstance(project)
-                                        .createDummyYamlWithText(
-                                            stringBuilder.toString()
-                                        ),
-                                    YAMLSequence::class.java
-                                )
-                                    .iterator()
-                                    .next()
-                            assetsValue.setValue(yamlValue)
-                        }
-                    }
-                }
-            }
-            saveChanges()
-            showNotify("Flutter: Configuration complete.")
-        } else {
+        if (module == null) {
             showNotify("This module is not flutter module")
+            return
         }
+
+        val rootPath = "${module.pubRoot.path}/"
+        val paths = mutableListOf<String>()
+        if (file.isDirectory) {
+            traversalDir(file, rootPath, paths)
+        } else {
+            paths.add(file.path.removePrefix(rootPath))
+        }
+
+        // 注意: tryGetAssetsList 返回的是缓存的配置对象, 必须复制后再修改, 否则会污染缓存
+        val rawAssets = FileHelperNew.tryGetAssetsList(module.map)
+        if (rawAssets != null && rawAssets.any { it !is String }) {
+            // Flutter 3.16+ 支持 `- path: x/` + flavors/transformers 这种 map 条目, 整体重写会丢掉它们
+            showNotify(
+                "pubspec assets contains map-style entries (path:/flavors:), " +
+                        "please add these paths manually: ${paths.joinToString(", ")}"
+            )
+            return
+        }
+        val existingAssets =
+            rawAssets
+                ?.mapNotNull { it as? String }
+                ?.filter { configured ->
+                    // 存在性检查必须相对于 pub 包根目录, 而不是 IntelliJ module 目录 (monorepo 下两者可能不同)
+                    File(module.pubRoot.path, configured.trimEnd('/')).exists()
+                }
+                ?.toMutableList()
+        if (existingAssets != null) {
+            paths.removeIf { existingAssets.contains(it) }
+        }
+
+        val yamlFile = PsiManager.getInstance(project).findFile(module.pubRoot.pubspec) as? YAMLFile
+        val flutterMapping =
+            yamlFile
+                ?.documents
+                ?.firstOrNull()
+                ?.topLevelValue
+                ?.let { it as? YAMLMapping }
+                ?.getKeyValueByKey("flutter")
+                ?.value as? YAMLMapping
+        if (flutterMapping == null) {
+            showNotify("No 'flutter:' section found in ${module.pubRoot.pubspec.path}")
+            return
+        }
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            val assetsValue = flutterMapping.getKeyValueByKey("assets")
+            val stringBuilder = StringBuilder()
+            existingAssets?.forEach { stringBuilder.append("    - $it\n") }
+            paths.forEach { stringBuilder.append("    - $it\n") }
+            val content = stringBuilder.toString().removeSuffix("\n")
+            val generator = YAMLElementGenerator.getInstance(project)
+            if (assetsValue == null) {
+                flutterMapping.putKeyValue(generator.createYamlKeyValue("assets", content))
+            } else {
+                val yamlValue =
+                    PsiTreeUtil.collectElementsOfType(
+                        generator.createDummyYamlWithText(content),
+                        YAMLSequence::class.java
+                    )
+                        .firstOrNull()
+                if (yamlValue != null) {
+                    assetsValue.setValue(yamlValue)
+                }
+            }
+        }
+        saveChanges()
+        showNotify("Flutter: Configuration complete.")
     }
 
     // 递归遍历判断资源树中是否包含指定类型的文件

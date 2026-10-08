@@ -33,7 +33,8 @@ data class PubspecConfig(
     val generationStyle: String, // "robust" (default), "legacy", "snake_case"
     val nameStyle: String,
     val leafType: String,
-    val packageParameterEnabled: Boolean
+    val packageParameterEnabled: Boolean,
+    val namedWithParent: Boolean = true
 ) {
     companion object {
         private val LOG = Logger.getInstance(PubspecConfig::class.java)
@@ -66,8 +67,9 @@ data class PubspecConfig(
                 } else {
                     pluginConfig[Constants.KEY_ENABLE] as? Boolean ?: true
                 }
+            // 与 FileHelperNew.isAutoDetectionEnable 保持一致: 有配置块且未禁用时默认开启
             val autoDetection =
-                pluginConfig?.get(Constants.KEY_AUTO_DETECTION) as? Boolean ?: false
+                pluginEnabled && (pluginConfig?.get(Constants.KEY_AUTO_DETECTION) as? Boolean ?: true)
             val autoAddDependencies =
                 pluginConfig?.get(Constants.KEY_AUTO_ADD_DEPENDENCIES) as? Boolean ?: true
             val outputDir =
@@ -106,6 +108,8 @@ data class PubspecConfig(
                 }
             val packageParameterEnabled =
                 pluginConfig?.get(Constants.KEY_PACKAGE_PARAMETER_ENABLED) as? Boolean ?: false
+            val namedWithParent =
+                pluginConfig?.get(Constants.KEY_NAMED_WITH_PARENT) as? Boolean ?: true
 
             return PubspecConfig(
                 assetPaths = assetPaths,
@@ -125,7 +129,8 @@ data class PubspecConfig(
                 generationStyle = generationStyle,
                 nameStyle = nameStyle,
                 leafType = leafType,
-                packageParameterEnabled = packageParameterEnabled
+                packageParameterEnabled = packageParameterEnabled,
+                namedWithParent = namedWithParent
             )
         }
 
@@ -134,12 +139,7 @@ data class PubspecConfig(
             try {
                 // 优先从 Document 读取(内存中的最新内容),如果获取不到则从磁盘读取
                 val document =
-                    com.intellij
-                        .openapi
-                        .fileEditor
-                        .FileDocumentManager
-                        .getInstance()
-                        .getDocument(pubspecFile)
+                    com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(pubspecFile)
                 val content = document?.text ?: String(pubspecFile.contentsToByteArray())
 
                 val yaml = Yaml()
@@ -237,7 +237,8 @@ object PubspecConfigCache {
                 old.generationStyle != new.generationStyle ||
                 old.nameStyle != new.nameStyle ||
                 old.leafType != new.leafType ||
-                old.packageParameterEnabled != new.packageParameterEnabled
+                old.packageParameterEnabled != new.packageParameterEnabled ||
+                old.namedWithParent != new.namedWithParent
         // 注意:故意忽略 flutterSvgVersion, lottieVersion, flutterVersion, dartVersion
     }
 
@@ -311,6 +312,11 @@ object PubspecConfigCache {
         if (old.packageParameterEnabled != new.packageParameterEnabled) {
             LOG.info(
                 "[FlutterAssetsGenerator #${project.name}] package_parameter_enabled changed: ${old.packageParameterEnabled} -> ${new.packageParameterEnabled}"
+            )
+        }
+        if (old.namedWithParent != new.namedWithParent) {
+            LOG.info(
+                "[FlutterAssetsGenerator #${project.name}] named_with_parent changed: ${old.namedWithParent} -> ${new.namedWithParent}"
             )
         }
         if (old.outputFilename != new.outputFilename) {

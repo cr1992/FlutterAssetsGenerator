@@ -7,6 +7,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.project.DumbService
 
 /**
  * 仅为当前右键选中的 Flutter 模块添加默认配置
@@ -20,6 +21,10 @@ class SetupCurrentModuleAction : AnAction() {
         val project = e.getData(PlatformDataKeys.PROJECT)
         if (project == null || !FileHelperNew.shouldActivateFor(project)) {
             showNotify("This is not a Flutter project")
+            return
+        }
+        if (DumbService.isDumb(project)) {
+            showNotify("Indexing in progress, please retry after indexing finishes")
             return
         }
 
@@ -46,17 +51,16 @@ class SetupCurrentModuleAction : AnAction() {
     }
 
     override fun update(e: AnActionEvent) {
+        // update() 在每次弹出菜单时都会调用, 这里只能用缓存, 不能触发索引扫描
         val project = e.getData(PlatformDataKeys.PROJECT)
-        val candidatePaths = SetupConfigurationHelper.resolveCandidatePaths(e)
         val visible =
             project != null &&
+                    !DumbService.isDumb(project) &&
                     FileHelperNew.shouldActivateFor(project) &&
-                    SetupConfigurationHelper.findTargetConfig(project, candidatePaths) != null
-        if (project != null) {
-            LOG.info(
-                "[FlutterAssetsGenerator #SetupCurrentModule] update project=${project.name} candidates=$candidatePaths visible=$visible"
-            )
-        }
+                    SetupConfigurationHelper.findTargetConfig(
+                        FileHelperNew.getCachedAssets(project),
+                        SetupConfigurationHelper.resolveCandidatePaths(e)
+                    ) != null
         e.presentation.isVisible = visible
         e.presentation.isEnabled = visible
     }

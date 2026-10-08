@@ -15,10 +15,36 @@ class DartClassGenerator(
     private val hasLottieDep: Boolean, // Whether lottie dependency exists
     private val hasRive: Boolean, // Whether Rive files exist
     private val hasRiveDep: Boolean, // Whether rive dependency exists
-    private val flutterVersion: SemanticVersion? // Flutter SDK Version
+    private val flutterVersion: SemanticVersion?, // Flutter SDK Version
+    private val flutterSvgVersion: String? = null // flutter_svg version constraint from pubspec (or the one about to be added)
 ) {
     companion object {
         private val LOG = Logger.getInstance(DartClassGenerator::class.java)
+
+        /**
+         * 选择 flutter_svg 模板. 优先看项目实际依赖的 flutter_svg 版本, 其次看 Flutter SDK 版本,
+         * 都拿不到时默认 2.x (自动添加的依赖也是 2.x, 1.x 模板已带废弃参数).
+         */
+        internal fun shouldUseFlutterSvg2(
+            flutterSvgVersion: String?,
+            flutterVersion: SemanticVersion?
+        ): Boolean {
+            flutterSvgVersion?.let { constraint ->
+                FlutterVersionHelper.parseVersionConstraint(constraint)?.let { return it.major >= 2 }
+            }
+            flutterVersion?.let { return it >= SemanticVersion(2, 5, 0) }
+            return true
+        }
+
+        /** 转成 Dart 单引号字符串字面量, 转义 \\ ' 和 $ (Dart 单引号字符串会做插值) */
+        internal fun dartLiteral(value: String): String {
+            val escaped =
+                value
+                    .replace("\\", "\\\\")
+                    .replace("'", "\\'")
+                    .replace("$", "\\$")
+            return "'$escaped'"
+        }
     }
 
     private val buffer = StringBuilder()
@@ -32,7 +58,7 @@ class DartClassGenerator(
 
     fun generate(): String {
         val style = FileHelperNew.getGenerationStyle(config)
-        LOG.info("[FlutterAssetsGenerator #DartClassGenerator] Generation style: $style")
+        LOG.debug("[FlutterAssetsGenerator #DartClassGenerator] Generation style: $style")
 
         return if (style == "legacy") {
             generateLegacy()
@@ -51,16 +77,16 @@ class DartClassGenerator(
         buffer.append(
             "///Docs: https://github.com/cr1992/FlutterAssetsGenerator\n"
         )
-        buffer.append("// ignore_for_file: dangling_library_doc_comments, implementation_imports\n")
+        buffer.append("// ignore_for_file: dangling_library_doc_comments\n")
     }
 
     private fun generateRobust(): String {
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Starting robust code generation..."
         )
         appendGeneratedFileHeader()
         val className = FileHelperNew.getGeneratedClassName(config)
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Root class name: $className"
         )
 
@@ -72,8 +98,6 @@ class DartClassGenerator(
             }
             if (hasLottieDep) {
                 buffer.append("import 'package:lottie/lottie.dart';\n")
-                buffer.append("import 'package:lottie/src/lottie_builder.dart';\n")
-                buffer.append("import 'package:lottie/src/composition.dart';\n")
             }
             if (hasRiveDep) {
                 buffer.append("import 'package:rive/rive.dart' hide Image;\n")
@@ -92,15 +116,15 @@ class DartClassGenerator(
         val prefix = ""
 
         basePrefix = prefix // 存储基础前缀供递归使用
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Base prefix: '$prefix'"
         )
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Root node children count: ${rootNode.children.size}"
         )
 
         // 生成根节点下的字段
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Generating root class fields..."
         )
         generateNodeFields(rootNode, prefix, isRoot = true)
@@ -108,7 +132,7 @@ class DartClassGenerator(
         buffer.append("}\n\n")
 
         // 生成所有目录类
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [DartClassGenerator] Generating directory classes..."
         )
         generateAllDirectoryClasses(rootNode)
@@ -125,7 +149,7 @@ class DartClassGenerator(
     }
 
     private fun generateLegacy(): String {
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] Starting legacy code generation (camel_case)..."
         )
         appendGeneratedFileHeader()
@@ -140,8 +164,6 @@ class DartClassGenerator(
             }
             if (hasLottieDep) {
                 buffer.append("import 'package:lottie/lottie.dart';\n")
-                buffer.append("import 'package:lottie/src/lottie_builder.dart';\n")
-                buffer.append("import 'package:lottie/src/composition.dart';\n")
             }
             if (hasRiveDep) {
                 buffer.append("import 'package:rive/rive.dart' hide Image;\n")
@@ -195,18 +217,18 @@ class DartClassGenerator(
             if (!isStringLeafMode) {
                 when (file.type) {
                     MediaType.IMAGE ->
-                        buffer.append("  static const AssetGenImage $finalName = AssetGenImage('$fullPath');\n")
+                        buffer.append("  static const AssetGenImage $finalName = AssetGenImage(${dartLiteral(fullPath)});\n")
                     MediaType.SVG ->
-                        buffer.append("  static const SvgGenImage $finalName = SvgGenImage('$fullPath');\n")
+                        buffer.append("  static const SvgGenImage $finalName = SvgGenImage(${dartLiteral(fullPath)});\n")
                     MediaType.LOTTIE ->
-                        buffer.append("  static const LottieGenImage $finalName = LottieGenImage('$fullPath');\n")
+                        buffer.append("  static const LottieGenImage $finalName = LottieGenImage(${dartLiteral(fullPath)});\n")
                     MediaType.RIVE ->
-                        buffer.append("  static const RiveGenImage $finalName = RiveGenImage('$fullPath');\n")
+                        buffer.append("  static const RiveGenImage $finalName = RiveGenImage(${dartLiteral(fullPath)});\n")
                     else ->
-                        buffer.append("  static const String $finalName = '$leafPath';\n")
+                        buffer.append("  static const String $finalName = ${dartLiteral(leafPath)};\n")
                 }
             } else {
-                buffer.append("  static const String $finalName = '$leafPath';\n")
+                buffer.append("  static const String $finalName = ${dartLiteral(leafPath)};\n")
             }
         }
 
@@ -238,24 +260,24 @@ class DartClassGenerator(
      * @param isRoot 是否为根类
      */
     private fun generateNodeFields(node: AssetNode, prefix: String, isRoot: Boolean) {
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Processing node: ${node.name}, path: ${node.path}, isRoot: $isRoot"
         )
         // 如果是根节点且需要扁平化,则处理扁平化后的子节点
         val shouldFlatten = isRoot && shouldFlattenRoot(node)
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Should flatten: $shouldFlatten"
         )
         val nodesToProcess =
             if (shouldFlatten) {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Flattening - processing children of: ${node.children[0].name}"
                 )
                 node.children[0].children
             } else {
                 node.children
             }
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Nodes to process: ${nodesToProcess.size}"
         )
 
@@ -269,7 +291,7 @@ class DartClassGenerator(
         val nameMap = mutableMapOf<AssetNode, String>()
         val usedNames = mutableSetOf<String>()
 
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Processing ${sortedChildren.size} children"
         )
 
@@ -284,11 +306,11 @@ class DartClassGenerator(
 
         // 记录检测到的重名文件
         baseNameCount.filter { it.value.size > 1 }.forEach { (baseName, files) ->
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Detected ${files.size} files with same basename: $baseName"
             )
             files.forEach { file ->
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields]   - ${file.name} (ext: ${file.virtualFile?.extension})"
                 )
             }
@@ -310,7 +332,7 @@ class DartClassGenerator(
                         } ?: ""
                     if (ext.isNotEmpty()) {
                         uniqueName = appendExtensionSuffix(baseName, ext)
-                        LOG.info(
+                        LOG.debug(
                             "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Renaming ${child.name}: $baseName → $uniqueName"
                         )
                     }
@@ -323,7 +345,7 @@ class DartClassGenerator(
             while (usedNames.contains(finalName)) {
                 finalName = "${uniqueName}${counter}"
                 counter++
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Name conflict detected, using: $finalName"
                 )
             }
@@ -335,13 +357,13 @@ class DartClassGenerator(
         // 生成字段
         for (child in sortedChildren) {
             val fieldName = nameMap[child]!!
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Generating field: $fieldName for ${child.name} (type: ${child.type})"
             )
 
             if (child.type == MediaType.DIRECTORY) {
                 val dirClassName = getGenClassName(child)
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateNodeFields] Directory class name: $dirClassName"
                 )
 
@@ -361,37 +383,38 @@ class DartClassGenerator(
                 // 根类使用 static const,子目录类使用 final
                 if (isStringLeafMode) {
                     buffer.append(
-                        "  ${if (isRoot) "static const" else "final"} String $fieldName = '$leafPath';\n"
+                        "  ${if (isRoot) "static const" else "final"} String $fieldName = ${dartLiteral(leafPath)};\n"
                     )
                 } else {
                     when (child.type) {
                         MediaType.IMAGE -> {
                             buffer.append(
-                                "  ${if (isRoot) "static const" else "final"} AssetGenImage $fieldName = ${if (isRoot) "" else "const "}AssetGenImage('$fullPath');\n"
+                                "  ${if (isRoot) "static const" else "final"} AssetGenImage $fieldName = ${if (isRoot) "" else "const "}AssetGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         MediaType.SVG -> {
                             buffer.append(
-                                "  ${if (isRoot) "static const" else "final"} SvgGenImage $fieldName = ${if (isRoot) "" else "const "}SvgGenImage('$fullPath');\n"
+                                "  ${if (isRoot) "static const" else "final"} SvgGenImage $fieldName = ${if (isRoot) "" else "const "}SvgGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         MediaType.LOTTIE -> {
                             buffer.append(
-                                "  ${if (isRoot) "static const" else "final"} LottieGenImage $fieldName = ${if (isRoot) "" else "const "}LottieGenImage('$fullPath');\n"
+                                "  ${if (isRoot) "static const" else "final"} LottieGenImage $fieldName = ${if (isRoot) "" else "const "}LottieGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         MediaType.RIVE -> {
                             buffer.append(
-                                "  ${if (isRoot) "static const" else "final"} RiveGenImage $fieldName = ${if (isRoot) "" else "const "}RiveGenImage('$fullPath');\n"
+                                "  ${if (isRoot) "static const" else "final"} RiveGenImage $fieldName = ${if (isRoot) "" else "const "}RiveGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         else -> {
+                            // 未知类型退化为 String, 与 legacy 一致使用带 package 前缀的路径
                             buffer.append(
-                                "  ${if (isRoot) "static const" else "final"} String $fieldName = '$fullPath';\n"
+                                "  ${if (isRoot) "static const" else "final"} String $fieldName = ${dartLiteral(leafPath)};\n"
                             )
                         }
                     }
@@ -402,25 +425,25 @@ class DartClassGenerator(
 
     /** 递归生成所有目录类 策略:一级目录不生成类,直接将其子目录作为根类的字段 只有二级及以下目录才生成独立的类 */
     private fun generateAllDirectoryClasses(node: AssetNode) {
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateAllDirectoryClasses] Starting..."
         )
         // 获取需要处理的节点
         val shouldFlatten = shouldFlattenRoot(node)
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateAllDirectoryClasses] Should flatten: $shouldFlatten"
         )
         val nodesToProcess =
             if (shouldFlatten) {
                 // 如果根节点只有一个目录子节点(通常是 "assets"),跳过它,处理其子节点
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateAllDirectoryClasses] Flattening - skipping ${node.children[0].name}"
                 )
                 node.children[0].children
             } else {
                 node.children
             }
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateAllDirectoryClasses] Processing ${nodesToProcess.size} top-level nodes"
         )
 
@@ -429,11 +452,11 @@ class DartClassGenerator(
         fun collectDirectories(nodes: List<AssetNode>, depth: Int = 0) {
             val indent = "  ".repeat(depth)
             for (child in nodes) {
-                LOG.info(
+                LOG.debug(
                     "$indent[collectDirectories] Checking: ${child.name} (type: ${child.type})"
                 )
                 if (child.type == MediaType.DIRECTORY) {
-                    LOG.info(
+                    LOG.debug(
                         "$indent[collectDirectories] Adding directory: ${child.name}, path: ${child.path}"
                     )
                     allDirectories.add(child)
@@ -445,18 +468,18 @@ class DartClassGenerator(
 
         collectDirectories(nodesToProcess)
 
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateAllDirectoryClasses] Collected ${allDirectories.size} directories to generate"
         )
         allDirectories.forEachIndexed { index, dir ->
-            LOG.info("  [$index] ${dir.name} (path: ${dir.path})")
+            LOG.debug("  [$index] ${dir.name} (path: ${dir.path})")
         }
 
         // 为所有收集到的目录生成类
         for (dir in allDirectories) {
             generateDirectoryClass(dir, basePrefix)
         }
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateAllDirectoryClasses] Completed"
         )
     }
@@ -474,7 +497,7 @@ class DartClassGenerator(
     /** 生成目录对应的类 注意:此方法只生成当前目录的类,不递归生成子目录类 子目录类由 generateAllDirectoryClasses 统一管理 */
     private fun generateDirectoryClass(node: AssetNode, prefix: String) {
         val className = getGenClassName(node)
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryClass] Generating class: $className for node: ${node.name} (path: ${node.path})"
         )
 
@@ -483,13 +506,13 @@ class DartClassGenerator(
         directoryClasses.append("  const $className();\n\n")
 
         // 生成该目录类下的字段
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryClass] Generating fields for $className..."
         )
         generateDirectoryFields(node, prefix, directoryClasses)
 
         directoryClasses.append("}\n\n")
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryClass] Completed $className"
         )
     }
@@ -503,7 +526,7 @@ class DartClassGenerator(
         val nameMap = mutableMapOf<AssetNode, String>()
         val usedNames = mutableSetOf<String>()
 
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryFields] Processing ${sortedChildren.size} children for node: ${node.name}"
         )
 
@@ -518,11 +541,11 @@ class DartClassGenerator(
 
         // 记录检测到的重名文件
         baseNameCount.filter { it.value.size > 1 }.forEach { (baseName, files) ->
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryFields] Detected ${files.size} files with same basename: $baseName"
             )
             files.forEach { file ->
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryFields]   - ${file.name} (ext: ${file.virtualFile?.extension})"
                 )
             }
@@ -544,7 +567,7 @@ class DartClassGenerator(
                         } ?: ""
                     if (ext.isNotEmpty()) {
                         uniqueName = appendExtensionSuffix(baseName, ext)
-                        LOG.info(
+                        LOG.debug(
                             "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryFields] Renaming ${child.name}: $baseName → $uniqueName"
                         )
                     }
@@ -557,7 +580,7 @@ class DartClassGenerator(
             while (usedNames.contains(finalName)) {
                 finalName = "${uniqueName}${counter}"
                 counter++
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #DartClassGenerator] [generateDirectoryFields] Name conflict detected, using: $finalName"
                 )
             }
@@ -582,35 +605,35 @@ class DartClassGenerator(
 
                 // 文件类型字段,使用 final
                 if (isStringLeafMode) {
-                    sb.append("  final String $fieldName = '$leafPath';\n")
+                    sb.append("  final String $fieldName = ${dartLiteral(leafPath)};\n")
                 } else {
                     when (child.type) {
                         MediaType.IMAGE -> {
                             sb.append(
-                                "  final AssetGenImage $fieldName = const AssetGenImage('$fullPath');\n"
+                                "  final AssetGenImage $fieldName = const AssetGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         MediaType.SVG -> {
                             sb.append(
-                                "  final SvgGenImage $fieldName = const SvgGenImage('$fullPath');\n"
+                                "  final SvgGenImage $fieldName = const SvgGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         MediaType.LOTTIE -> {
                             sb.append(
-                                "  final LottieGenImage $fieldName = const LottieGenImage('$fullPath');\n"
+                                "  final LottieGenImage $fieldName = const LottieGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         MediaType.RIVE -> {
                             sb.append(
-                                "  final RiveGenImage $fieldName = const RiveGenImage('$fullPath');\n"
+                                "  final RiveGenImage $fieldName = const RiveGenImage(${dartLiteral(fullPath)});\n"
                             )
                         }
 
                         else -> {
-                            sb.append("  final String $fieldName = '$fullPath';\n")
+                            sb.append("  final String $fieldName = ${dartLiteral(leafPath)};\n")
                         }
                     }
                 }
@@ -735,12 +758,11 @@ $packageDecl
 
             if (hasSvgDep) {
                 // 判断是否使用 flutter_svg 2.0+ (Flutter >= 2.5.0 时使用 flutter_svg 2.0+)
-                val useFlutterSvg2 =
-                    flutterVersion != null && flutterVersion >= SemanticVersion(2, 5, 0)
+                val useFlutterSvg2 = shouldUseFlutterSvg2(flutterSvgVersion, flutterVersion)
 
                 if (useFlutterSvg2) {
                     // flutter_svg 2.0+: 移除已废弃的 color/colorBlendMode/cacheColorFilter 参数
-                    LOG.info(
+                    LOG.debug(
                         "[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 2.x compatible template"
                     )
                     buffer.append(
@@ -759,6 +781,7 @@ $packageDecl
     String? semanticsLabel,
     bool excludeFromSemantics = false,
     SvgTheme? theme,
+    ColorFilter? colorFilter,
     Clip clipBehavior = Clip.hardEdge,
   }) {
     return SvgPicture.asset(
@@ -776,6 +799,7 @@ $packageDecl
       semanticsLabel: semanticsLabel,
       excludeFromSemantics: excludeFromSemantics,
       theme: theme,
+      colorFilter: colorFilter,
       clipBehavior: clipBehavior,
     );
   }
@@ -783,7 +807,7 @@ $packageDecl
                     )
                 } else {
                     // flutter_svg 1.x: 保留 color/colorBlendMode/cacheColorFilter 参数
-                    LOG.info(
+                    LOG.debug(
                         "[FlutterAssetsGenerator #DartClassGenerator] Generating flutter_svg 1.x compatible template"
                     )
                     buffer.append(
@@ -869,6 +893,8 @@ $packageDecl
             )
 
             if (hasLottieDep) {
+                // LottieFrameBuilder / WarningCallback 没有从 package:lottie/lottie.dart 导出,
+                // 模板里直接写展开的函数类型, 避免 import package:lottie/src 内部文件
                 buffer.append(
                     """
   LottieBuilder lottie({
@@ -883,7 +909,7 @@ $packageDecl
     LottieImageProviderFactory? imageProviderFactory,
     Key? key,
     AssetBundle? bundle,
-    LottieFrameBuilder? frameBuilder,
+    Widget Function(BuildContext context, Widget child, LottieComposition? composition)? frameBuilder,
     ImageErrorWidgetBuilder? errorBuilder,
     double? width,
     double? height,
@@ -892,7 +918,7 @@ $packageDecl
     String? package${if (packageName != null) " = package" else ""},
     bool? addRepaintBoundary,
     FilterQuality? filterQuality,
-    WarningCallback? onWarning,
+    void Function(String)? onWarning,
   }) {
     return Lottie.asset(
       _assetName,

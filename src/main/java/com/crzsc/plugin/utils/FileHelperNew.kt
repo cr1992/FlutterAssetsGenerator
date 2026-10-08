@@ -1,23 +1,23 @@
 package com.crzsc.plugin.utils
 
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import io.flutter.pub.PubRoot
 import io.flutter.utils.FlutterModuleUtils
-import java.util.*
 import java.util.regex.Pattern
-import org.jetbrains.kotlin.idea.util.projectStructure.getModule
-import org.jetbrains.kotlin.konan.file.File
+import org.jetbrains.yaml.YAMLLanguage
 import org.yaml.snakeyaml.Yaml
 
 /** 基于Module来处理Assets */
@@ -36,53 +36,78 @@ object FileHelperNew {
             "ephemeral"
         )
 
-    /** 获取所有可用的Flutter Module的Asset配置 */
+    /**
+     * 获取所有可用的Flutter Module的Asset配置 (每次调用都会扫描索引, 需要在读锁内调用)
+     */
     @JvmStatic
     fun getAssets(project: Project): List<ModulePubSpecConfig> {
         val folders = mutableListOf<ModulePubSpecConfig>()
+        val basePath = project.basePath
         val pubspecFiles = findProjectPubspecFiles(project)
-        val filtered = pubspecFiles.filter { file -> isEligibleModulePubspecPath(file.path) }
-        LOG.info("Found ${pubspecFiles.size} pubspec.yaml, after filtering: ${filtered.size}")
+        val filtered =
+            pubspecFiles.filter { file -> isEligibleModulePubspecPath(file.path, basePath) }
 
         for (pubspecFile in filtered) {
-            val module = pubspecFile.getModule(project)
+            val module = ModuleUtilCore.findModuleForFile(pubspecFile, project)
             if (module == null) {
-                LOG.info("  skipped (no module): ${pubspecFile.path}")
+                LOG.debug("  skipped (no module): ${pubspecFile.path}")
                 continue
             }
             val config = getPubSpecConfig(module, pubspecFile)
             if (config == null) {
-                LOG.info("  skipped (not flutter or unreadable): ${pubspecFile.path}")
+                LOG.debug("  skipped (not flutter or unreadable): ${pubspecFile.path}")
                 continue
             }
-            LOG.info("  accepted: ${pubspecFile.path} [module=${module.name}]")
+            LOG.debug("  accepted: ${pubspecFile.path} [module=${module.name}]")
             folders.add(config)
         }
-        LOG.info("Resolved ${folders.size} Flutter module config(s)")
+        LOG.info(
+            "[FlutterAssetsGenerator #${project.name}] Found ${pubspecFiles.size} pubspec.yaml, eligible=${filtered.size}, flutterModules=${folders.size}"
+        )
         return folders
     }
 
-    private fun findProjectPubspecFiles(project: Project): List<VirtualFile> {
-        val pubspecFiles = mutableListOf<VirtualFile>()
-        val scope = ProjectScope.getContentScope(project)
-        FilenameIndex.processFilesByName(
-            "pubspec.yaml",
-            false,
-            { file: PsiFileSystemItem ->
-                file.virtualFile?.let { pubspecFiles.add(it) }
-                true
-            },
-            scope,
-            project
-        )
-        return pubspecFiles
+    /**
+     * 项目级缓存的模块配置列表. 只在 pubspec.yaml (YAML PSI) 变化、VFS 结构变化或项目根变化时失效,
+     * 供高频调用方 (行标记、Action.update、VFS 监听) 使用, 避免每次都走 FilenameIndex.
+     */
+    @JvmStatic
+    fun getCachedAssets(project: Project): List<ModulePubSpecConfig> {
+        return CachedValuesManager.getManager(project).getCachedValue(project, ASSETS_CACHE_KEY, {
+            CachedValueProvider.Result.create(
+                getAssets(project),
+                PsiManager.getInstance(project).modificationTracker.forLanguage(YAMLLanguage.INSTANCE),
+                VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS,
+                ProjectRootManager.getInstance(project)
+            )
+        }, false)
     }
 
-    internal fun isEligibleModulePubspecPath(path: String): Boolean {
+    private val ASSETS_CACHE_KEY =
+        com.intellij.openapi.util.Key.create<com.intellij.psi.util.CachedValue<List<ModulePubSpecConfig>>>(
+            "FlutterAssetsGenerator.moduleConfigs"
+        )
+
+    private fun findProjectPubspecFiles(project: Project): List<VirtualFile> {
+        val scope = ProjectScope.getContentScope(project)
+        return FilenameIndex.getVirtualFilesByName("pubspec.yaml", scope).toList()
+    }
+
+    /**
+     * 判断 pubspec 是否位于可识别的模块目录.
+     * 只检查相对于项目根目录的路径段, 避免项目本身放在名为 build 之类的目录下时被整体排除.
+     */
+    internal fun isEligibleModulePubspecPath(path: String, projectBasePath: String? = null): Boolean {
+        val relative =
+            if (!projectBasePath.isNullOrEmpty() && path.startsWith("$projectBasePath/")) {
+                path.substring(projectBasePath.length)
+            } else {
+                path
+            }
         val excluded =
-            excludedPubspecPathSegments.firstOrNull { segment -> path.contains("/$segment/") }
+            excludedPubspecPathSegments.firstOrNull { segment -> relative.contains("/$segment/") }
         if (excluded != null) {
-            LOG.info("  excluded (matched /$excluded/): $path")
+            LOG.debug("  excluded (matched /$excluded/): $path")
             return false
         }
         return true
@@ -113,17 +138,12 @@ object FileHelperNew {
 
     internal fun readPubspecMap(pubspecFile: VirtualFile): Map<String, Any>? {
         return try {
-            val document =
-                com.intellij
-                    .openapi
-                    .fileEditor
-                    .FileDocumentManager
-                    .getInstance()
-                    .getDocument(pubspecFile)
+            val document = FileDocumentManager.getInstance().getDocument(pubspecFile)
             val content = document?.text ?: String(pubspecFile.contentsToByteArray())
+            @Suppress("UNCHECKED_CAST")
             Yaml().load(content) as? Map<String, Any>
         } catch (e: Exception) {
-            e.printStackTrace()
+            LOG.warn("Failed to parse ${pubspecFile.path}: ${e.message}")
             null
         }
     }
@@ -140,26 +160,11 @@ object FileHelperNew {
     }
 
     private fun hasEligibleFlutterPubspec(project: Project): Boolean {
-        val scope = ProjectScope.getContentScope(project)
-        var found = false
-        FilenameIndex.processFilesByName(
-            "pubspec.yaml",
-            false,
-            { file: PsiFileSystemItem ->
-                val virtualFile = file.virtualFile ?: return@processFilesByName true
-                if (!isEligibleModulePubspecPath(virtualFile.path)) {
-                    return@processFilesByName true
-                }
-                if (readPubspecMap(virtualFile)?.let(::isFlutterPubspecMap) == true) {
-                    found = true
-                    return@processFilesByName false
-                }
-                true
-            },
-            scope,
-            project
-        )
-        return found
+        val basePath = project.basePath
+        return findProjectPubspecFiles(project).any { file ->
+            isEligibleModulePubspecPath(file.path, basePath) &&
+                    readPubspecMap(file)?.let(::isFlutterPubspecMap) == true
+        }
     }
 
     fun tryGetAssetsList(map: Map<*, *>): MutableList<*>? {
@@ -173,8 +178,14 @@ object FileHelperNew {
     fun getPubSpecConfig(module: Module, pubspecFile: VirtualFile): ModulePubSpecConfig? {
         val psiFile = PsiManager.getInstance(module.project).findFile(pubspecFile) ?: return null
 
+        // 除了 pubspec 本身, 还依赖目录结构 (assetVFiles 需要重新解析) 和项目根 (Module 可能被重新导入)
         return CachedValuesManager.getCachedValue(psiFile) {
-            CachedValueProvider.Result.create(computePubSpecConfig(module, pubspecFile), psiFile)
+            CachedValueProvider.Result.create(
+                computePubSpecConfig(module, pubspecFile),
+                psiFile,
+                VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS,
+                ProjectRootManager.getInstance(module.project)
+            )
         }
     }
 
@@ -210,7 +221,7 @@ object FileHelperNew {
                 )
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LOG.warn("Failed to build config for ${pubspecFile.path}", e)
             return null
         }
         return null
@@ -230,7 +241,7 @@ object FileHelperNew {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LOG.warn("Failed to read config for ${pubspecFile.path}", e)
             return null
         }
         return null
@@ -327,7 +338,7 @@ object FileHelperNew {
             Pattern.compile(pattern)
             pattern
         } catch (e: Exception) {
-            e.printStackTrace()
+            LOG.warn("Invalid filename_split_pattern, falling back to default: ${e.message}")
             Constants.DEFAULT_FILENAME_SPLIT_PATTERN
         }
     }
@@ -339,7 +350,7 @@ object FileHelperNew {
             val paths = readSetting(config, Constants.PATH_IGNORE) as List<String>? ?: emptyList()
             paths
         } catch (e: Exception) {
-            e.printStackTrace()
+            LOG.warn("Invalid path_ignore, ignoring: ${e.message}")
             emptyList()
         }
     }
@@ -383,17 +394,10 @@ object FileHelperNew {
         createIfMissing: Boolean
     ): VirtualFile? {
         val root = lib ?: return null
-        if (!outputDir.contains(File.separator)) {
-            return if (createIfMissing) {
-                root.findOrCreateChildDir(root, outputDir)
-            } else {
-                root.findChild(outputDir)
-            }
-        }
-
         var current: VirtualFile = root
-        for (dir in outputDir.split(File.separator)) {
-            if (dir.isEmpty()) {
+        // VFS 路径和 pubspec 里的配置统一使用 '/', 不能用 File.separator (Windows 下是 '\\')
+        for (dir in outputDir.split('/', '\\')) {
+            if (dir.isEmpty() || dir == ".") {
                 continue
             }
             current =

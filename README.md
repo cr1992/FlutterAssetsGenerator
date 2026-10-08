@@ -11,7 +11,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 ### Support
 
 - Found a bug or unexpected behavior? Please report it at [GitHub Issues](https://github.com/cr1992/FlutterAssetsGenerator/issues).
-- New plugin releases are published at [GitHub Releases](https://github.com/cr1992/FlutterAssetsGenerator/releases). Check there for the latest release notes and installable packages.
+- Release notes for each version are listed in the [Changelog](https://github.com/cr1992/FlutterAssetsGenerator/blob/master/doc/CHANGELOG.md).
 
 ### Core Features
 
@@ -26,7 +26,7 @@ A powerful Android Studio / IntelliJ plugin that automatically generates a type-
 - **Smart Auto Update**: 
     - **Assets**: Watch for image additions/deletions and regenerate automatically.
     - **Config**: Triggered on **File Save** (Cmd+S) in `pubspec.yaml`. Smart diffing ensures builds only run when necessary.
-    - **Performance**: Setup and generation run asynchronously, and generated-file formatting is skipped to keep EDT writes minimal. In the 2026-04-21 monorepo reproduction, batch generation dropped from `23.7s` to `1.512s` (`15.67x` faster, `93.6%` lower total time), while average per-module write time dropped from `1339.88ms` to `7.62ms` (`175.72x` faster, `99.4%` lower).
+    - **Performance**: Setup and generation run asynchronously in the background, module configs are cached per project, and generated-file formatting is skipped to keep EDT writes minimal even in large monorepos.
 
 ### Usage
 

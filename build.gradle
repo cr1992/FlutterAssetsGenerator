@@ -28,12 +28,18 @@ String properties(String key) {
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
+// since-build 213 / 平台 2021.3 要求字节码目标 11 (用 JDK 17 构建时默认会变成 17)
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
 compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
 }
 
 compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
 }
 
 repositories {
@@ -41,7 +47,7 @@ repositories {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    // kotlin-stdlib 由 IDE 平台提供, 不再打进发布包 (见 gradle.properties kotlin.stdlib.default.dependency)
     testImplementation "org.mockito:mockito-core:4.8.0"
     testImplementation "org.mockito:mockito-inline:4.8.0"
 }
@@ -111,6 +117,20 @@ patchPluginXml {
 
 runPluginVerifier {
     ideVersions = properties("pluginVerifierIdeVersions").split(',').toList()
+    // 本机已安装的 IDE 也一起验证 (可通过 -PpluginVerifierLocalPaths=/path/a,/path/b 覆盖)
+    def localIdePaths = project.findProperty("pluginVerifierLocalPaths")
+    if (localIdePaths) {
+        localPaths = localIdePaths.toString().split(',').collect { file(it.trim()) }
+    }
+    failureLevel = [
+        org.jetbrains.intellij.tasks.RunPluginVerifierTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+        org.jetbrains.intellij.tasks.RunPluginVerifierTask.FailureLevel.INVALID_PLUGIN
+    ]
+}
+
+// 发布到 JetBrains Marketplace: PUBLISH_TOKEN=<token> ./gradlew publishPlugin
+publishPlugin {
+    token = System.getenv("PUBLISH_TOKEN")
 }
 
 test {

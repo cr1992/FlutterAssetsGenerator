@@ -36,8 +36,8 @@ class SetupProjectAction : AnAction() {
     )
 
     override fun actionPerformed(e: AnActionEvent) {
-        val project = e.getData(PlatformDataKeys.PROJECT)
-        if (!FileHelperNew.shouldActivateFor(project!!)) {
+        val project = e.getData(PlatformDataKeys.PROJECT) ?: return
+        if (!FileHelperNew.shouldActivateFor(project)) {
             showNotify("This is not a Flutter project")
             return
         }
@@ -50,9 +50,12 @@ class SetupProjectAction : AnAction() {
                     val scanElapsedMs =
                         measureTimeMillis {
                             assets =
-                                ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                                ReadAction.nonBlocking<List<ModulePubSpecConfig>> {
                                     FileHelperNew.getAssets(project)
                                 }
+                                    .inSmartMode(project)
+                                    .expireWith(project)
+                                    .executeSynchronously()
                         }
 
                     LOG.info(
@@ -113,9 +116,12 @@ class SetupProjectAction : AnAction() {
                     val refreshElapsedMs =
                         measureTimeMillis {
                             refreshedAssets =
-                                ReadAction.compute<List<ModulePubSpecConfig>, RuntimeException> {
+                                ReadAction.nonBlocking<List<ModulePubSpecConfig>> {
                                     FileHelperNew.getAssets(project)
                                 }
+                                    .inSmartMode(project)
+                                    .expireWith(project)
+                                    .executeSynchronously()
                         }
                     val readiness: GenerationReadiness
                     val readinessElapsedMs =

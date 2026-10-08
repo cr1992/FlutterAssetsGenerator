@@ -3,3 +3,9 @@
 build/
 .gradle/
 /local.properties
+.DS_Store
+
+# AI assistant workspaces
+.gemini/
+.kiro/
+openspec/

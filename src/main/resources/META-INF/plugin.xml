@@ -10,10 +10,9 @@ A powerful Android Studio / IntelliJ plugin that automatically generates type-sa
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
-    <depends>com.intellij.modules.json</depends>
-    <depends>com.intellij.modules.all</depends>
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.yaml</depends>
     <depends>Dart</depends>
-    <depends>org.jetbrains.kotlin</depends>
     <depends>io.flutter</depends>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -27,14 +26,19 @@ A powerful Android Studio / IntelliJ plugin that automatically generates type-sa
                                         implementationClass="com.crzsc.plugin.provider.AssetsLineMarkerProvider"/>
     </extensions>
 
-    <extensions defaultExtensionNs="org.jetbrains.kotlin">
-        <supportsKotlinPluginMode supportsK2="true"/>
-    </extensions>
-
     <applicationListeners>
         <listener class="com.crzsc.plugin.listener.MyProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </applicationListeners>
+
+    <projectListeners>
+        <!-- 资源文件变化 -> 重新生成 -->
+        <listener class="com.crzsc.plugin.listener.VfsAssetListener"
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+        <!-- pubspec.yaml 保存 -> 配置 diff 后按需生成 -->
+        <listener class="com.crzsc.plugin.listener.PubspecDocumentListener"
+                  topic="com.intellij.openapi.fileEditor.FileDocumentManagerListener"/>
+    </projectListeners>
 
     <actions>
         <!-- Flutter Assets Generator 工具组 -->

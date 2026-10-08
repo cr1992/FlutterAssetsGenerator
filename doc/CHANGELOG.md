@@ -1,6 +1,38 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
 [//]: # (# FlutterAssetsGenerator Changelog)
+## [3.3.1]
+
+### Fixed / 修复
+- **IntelliJ IDEA 2026.2 crash**: Removed all usages of Kotlin plugin internal APIs (`ProjectStructureUtilKt`, `toPsiFile`, `findModule`). The plugin no longer depends on the Kotlin plugin at all. Fixes #42 and #44.
+  - **IDEA 2026.2 崩溃**: 移除对 Kotlin 插件内部 API 的全部引用，插件不再依赖 Kotlin 插件。修复 #42、#44。
+- **Editor lag**: The gutter icon provider used to rescan every `pubspec.yaml` in the project for every string literal in every Dart file. Module configs are now cached per project and only recomputed when a `pubspec.yaml`, the VFS structure, or project roots change. Fixes #28.
+  - **编辑器卡顿**: 行标记以前对每个 Dart 字符串都全量扫描 pubspec。现改为项目级缓存，仅在 pubspec / 目录结构 / 项目根变化时重新计算。修复 #28。
+- **Asset watcher**: Irrelevant VFS events (`.dart` edits, `build/`, `.dart_tool/`, etc.) no longer trigger module scans; scans wait for indexing to finish instead of throwing `IndexNotReadyException`; all affected modules in one batch are regenerated instead of only the first.
+  - **资源监听**: 无关的 VFS 事件不再触发扫描；索引期间等待就绪而不是抛异常；同一批事件涉及多个模块时全部重新生成。
+- **`enable: false` cleanup**: Deleting the generated file now runs inside a write action; previously it threw an assertion on every code path.
+  - **禁用清理**: 删除生成文件改为在 write action 中执行，修复此前必然抛异常的问题。
+- **flutter_svg template (#43)**: The SVG template is now chosen by the `flutter_svg` version in `pubspec.yaml` (falling back to the Flutter SDK version, then 2.x), the 2.x template gains `colorFilter`, and the Flutter version is read from `bin/cache/flutter.version.json` (new SDKs no longer ship a root `version` file). The `flutter --version` fallback now has a timeout and works on Windows.
+  - **flutter_svg 模板 (#43)**: 按 pubspec 里 flutter_svg 的实际版本选择模板（兜底 Flutter SDK 版本，再兜底 2.x），2.x 模板补充 `colorFilter`；Flutter 版本改从 `flutter.version.json` 读取；`flutter --version` 兜底增加超时并支持 Windows。
+- **Generated Dart code**: Asset paths are now escaped (`$`, `'`, `\`), unknown file types use the package-prefixed path consistently in both styles, and the generated file no longer imports `package:lottie/src/...` internals.
+  - **生成代码**: 资源路径转义 `$`、`'`、`\`；未知类型在两种风格下统一使用带 package 前缀的路径；不再引用 lottie 的 `src/` 内部文件。
+- **"Configuring Paths" action**: No longer mutates the cached config, resolves existing entries against the pub package root (not the IntelliJ module), and handles paths with `/` on Windows.
+  - **右键配置路径**: 不再污染缓存；已有条目相对 pub 包根目录校验；Windows 下路径处理修复。
+- **Config consistency**: `auto_detection` now defaults to `true` on both trigger paths when the key is omitted; changing `named_with_parent` triggers regeneration.
+  - **配置一致性**: 省略 `auto_detection` 时两条触发路径都默认开启；修改 `named_with_parent` 会触发重新生成。
+- **Module detection**: Cache-directory exclusion (`build`, `.dart_tool`, ...) is now matched relative to the project root, so a project located under a folder named `build` is no longer ignored.
+  - **模块识别**: 缓存目录排除改为相对项目根目录匹配，项目本身放在 `build` 目录下不再被整体忽略。
+
+### Changed / 变更
+- Minimum supported IDE build is now 213 (2021.3), matching the compile target.
+  - 最低支持 IDE 版本提升到 213 (2021.3)，与编译目标一致。
+- `kotlin-stdlib` is no longer bundled in the plugin zip; the platform provides it.
+  - 不再把 `kotlin-stdlib` 打进发布包。
+- Per-file / per-node logging downgraded from INFO to DEBUG to keep `idea.log` quiet.
+  - 逐文件 / 逐节点日志从 INFO 降为 DEBUG。
+- Deprecated platform APIs replaced (`projectOpened`, `AppTopics.FILE_DOCUMENT_SYNC`, `FilenameIndex.processFilesByName`, `Runtime.exec`).
+  - 替换已废弃的平台 API。
+
 ## [3.3.0]
 
 ### Added / 新增

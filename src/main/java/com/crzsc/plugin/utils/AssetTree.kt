@@ -37,14 +37,14 @@ object AssetTreeBuilder {
         moduleRootPath: String,
         ignorePath: List<String>
     ): AssetNode {
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #AssetTreeBuilder] [AssetTreeBuilder] Building asset tree from ${files.size} files"
         )
         // 创建根节点
         val rootNode = AssetNode("Assets", "", MediaType.DIRECTORY, null)
 
         for (file in files) {
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [AssetTreeBuilder] Processing file: ${file.path}"
             )
             if (file.isDirectory) {
@@ -59,7 +59,7 @@ object AssetTreeBuilder {
             }
         }
 
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #AssetTreeBuilder] [AssetTreeBuilder] Asset tree built successfully"
         )
 
@@ -77,7 +77,7 @@ object AssetTreeBuilder {
             val child = iterator.next()
             val isEmptyDir = pruneEmptyDirectories(child)
             if (isEmptyDir) {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [prune] Removing empty directory: ${child.name}"
                 )
                 iterator.remove()
@@ -95,14 +95,14 @@ object AssetTreeBuilder {
         ignorePath: List<String>
     ) {
         if (shouldIgnore(file, ignorePath)) return
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #AssetTreeBuilder] [processFile] Processing: ${file.path}, isDirectory: ${file.isDirectory}"
         )
 
         if (file.isDirectory) {
             // 如果是目录,为该目录创建节点(如果不存在)
             val relativePath = file.path.removePrefix("$moduleRootPath/")
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [processFile] Directory relativePath: $relativePath"
             )
 
@@ -113,13 +113,13 @@ object AssetTreeBuilder {
                     it.name == dirName && it.type == MediaType.DIRECTORY
                 }
             if (dirNode == null) {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [processFile] Creating directory node: $dirName (path: $relativePath)"
                 )
                 dirNode = AssetNode(dirName, relativePath, MediaType.DIRECTORY, null)
                 parentNode.children.add(dirNode)
             } else {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [processFile] Found existing directory node: $dirName"
                 )
             }
@@ -134,7 +134,7 @@ object AssetTreeBuilder {
             val name = file.nameWithoutExtension
             val relativePath = file.path.removePrefix("$moduleRootPath/")
 
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [processFile] Adding file: $name (path: $relativePath, type: $mediaType)"
             )
 
@@ -152,7 +152,7 @@ object AssetTreeBuilder {
         moduleRootPath: String
     ): AssetNode {
         val relativePath = directory.path.removePrefix("$moduleRootPath/")
-        LOG.info(
+        LOG.debug(
             "[FlutterAssetsGenerator #AssetTreeBuilder] [getNodeForPath] directory: ${directory.path}, relativePath: $relativePath"
         )
         if (relativePath.isEmpty()) return root // 根目录
@@ -172,13 +172,13 @@ object AssetTreeBuilder {
                 currentNode.children.find { it.name == part && it.type == MediaType.DIRECTORY }
             if (child == null) {
                 // 不存在则创建,使用完整的相对路径
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [getNodeForPath] Creating new directory node: $part (path: $currentPath)"
                 )
                 child = AssetNode(part, currentPath, MediaType.DIRECTORY, null)
                 currentNode.children.add(child)
             } else {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [getNodeForPath] Found existing directory node: $part"
                 )
             }
@@ -189,14 +189,14 @@ object AssetTreeBuilder {
 
     private fun shouldIgnore(file: VirtualFile, ignorePath: List<String>): Boolean {
         if (file.name.startsWith(".")) {
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [shouldIgnore] Ignoring dot file: ${file.name}"
             )
             return true
         }
 
         if (file.isDirectory && resolutionDirPattern.matches(file.name)) {
-            LOG.info(
+            LOG.debug(
                 "[FlutterAssetsGenerator #AssetTreeBuilder] [shouldIgnore] Ignoring resolution variant directory: ${file.name}"
             )
             return true
@@ -204,7 +204,7 @@ object AssetTreeBuilder {
         // 忽略配置列表中的文件
         for (ignore in ignorePath) {
             if (file.path.contains(ignore, ignoreCase = true)) {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [shouldIgnore] Ignoring file matching '$ignore': ${file.path}"
                 )
                 return true
@@ -230,7 +230,7 @@ object AssetTreeBuilder {
     private fun isLottieFile(file: VirtualFile): Boolean {
         return try {
             if (file.length > 5 * 1024 * 1024) {
-                LOG.info(
+                LOG.debug(
                     "[FlutterAssetsGenerator #AssetTreeBuilder] [isLottieFile] Skipping large file (>5MB): ${file.name} (${file.length} bytes)"
                 )
                 return false // 跳过大于 5MB 的文件
